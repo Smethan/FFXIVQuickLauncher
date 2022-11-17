@@ -1,12 +1,17 @@
+
+
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 
-#if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER && !WIN32
 using System.Net.Security;
 #endif
 
@@ -20,8 +25,7 @@ using XIVLauncher.Common.Game.Patch.PatchList;
 using XIVLauncher.Common.Encryption;
 using XIVLauncher.Common.Game.Exceptions;
 using XIVLauncher.Common.PlatformAbstractions;
-
-#nullable enable
+using XIVLauncher.Common.Util;
 
 namespace XIVLauncher.Common.Game;
 
@@ -41,7 +45,7 @@ public class Launcher
 
         ServicePointManager.Expect100Continue = false;
 
-#if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER && !WIN32
         var sslOptions = new SslClientAuthenticationOptions()
         {
             CipherSuitesPolicy = new CipherSuitesPolicy(new[] { TlsCipherSuite.TLS_DHE_RSA_WITH_AES_256_GCM_SHA384 })
@@ -213,10 +217,10 @@ public class Launcher
         };
     }
 
-    public object? LaunchGame(IGameRunner runner, string sessionId, int region, int expansionLevel,
-                              bool isSteamServiceAccount, string additionalArguments,
-                              DirectoryInfo gamePath, bool isDx11, ClientLanguage language,
-                              bool encryptArguments, DpiAwareness dpiAwareness)
+    public Process? LaunchGame(IGameRunner runner, string sessionId, int region, int expansionLevel,
+                               bool isSteamServiceAccount, string additionalArguments,
+                               DirectoryInfo gamePath, bool isDx11, ClientLanguage language,
+                               bool encryptArguments, DpiAwareness dpiAwareness)
     {
         Log.Information(
             $"XivGame::LaunchGame(steamServiceAccount:{isSteamServiceAccount}, args:{additionalArguments})");
@@ -247,9 +251,9 @@ public class Launcher
         // This is a bit of a hack; ideally additionalArguments would be a dictionary or some KeyValue structure
         if (!string.IsNullOrEmpty(additionalArguments))
         {
-            var regex = new Regex(@"\s*(?<key>[^=]+)\s*=\s*(?<value>[^\s]+)\s*", RegexOptions.Compiled);
+            var regex = new Regex(@"\s*(?<key>[^\s=]+)\s*=\s*(?<value>([^=]*$|[^=]*\s(?=[^\s=]+)))\s*", RegexOptions.Compiled);
             foreach (Match match in regex.Matches(additionalArguments))
-                argumentBuilder.Append(match.Groups["key"].Value, match.Groups["value"].Value);
+                argumentBuilder.Append(match.Groups["key"].Value, match.Groups["value"].Value.Trim());
         }
 
         if (!File.Exists(exePath))
@@ -290,35 +294,52 @@ public class Launcher
     /// <param name="exLevel"></param>
     private static void EnsureVersionSanity(DirectoryInfo gamePath, int exLevel)
     {
-        var failed = string.IsNullOrWhiteSpace(Repository.Ffxiv.GetVer(gamePath));
-        failed &= string.IsNullOrWhiteSpace(Repository.Ffxiv.GetVer(gamePath, true));
+        var failed = IsBadVersionSanity(gamePath, Repository.Ffxiv);
+        failed |= IsBadVersionSanity(gamePath, Repository.Ffxiv, true);
 
         if (exLevel >= 1)
         {
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex1.GetVer(gamePath));
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex1.GetVer(gamePath, true));
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex1);
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex1, true);
         }
 
         if (exLevel >= 2)
         {
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex2.GetVer(gamePath));
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex2.GetVer(gamePath, true));
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex2);
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex2, true);
         }
 
         if (exLevel >= 3)
         {
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex3.GetVer(gamePath));
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex3.GetVer(gamePath, true));
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex3);
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex3, true);
         }
 
         if (exLevel >= 4)
         {
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex4.GetVer(gamePath));
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex4.GetVer(gamePath, true));
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex4);
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex4, true);
         }
 
         if (failed)
             throw new InvalidVersionFilesException();
+    }
+
+    private static bool IsBadVersionSanity(DirectoryInfo gamePath, Repository repo, bool isBck = false)
+    {
+        var text = repo.GetVer(gamePath, isBck);
+
+        var nullOrWhitespace = string.IsNullOrWhiteSpace(text);
+        var containsNewline = text.Contains("\n");
+        var allNullBytes = Encoding.UTF8.GetBytes(text).All(x => x == 0x00);
+
+        if (nullOrWhitespace || containsNewline || allNullBytes)
+        {
+            Log.Error("Sanity check failed for {repo}/{isBck}: {NullOrWhitespace}, {ContainsNewline}, {AllNullBytes}", repo, isBck, nullOrWhitespace, containsNewline, allNullBytes);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -359,7 +380,15 @@ public class Launcher
 
         Log.Verbose("Boot patching is needed... List:\n{PatchList}", resp);
 
-        return PatchListParser.Parse(text);
+        try
+        {
+            return PatchListParser.Parse(text);
+        }
+        catch (PatchListParseException ex)
+        {
+            Log.Information("Patch list:\n{PatchList}", ex.List);
+            throw;
+        }
     }
 
     private async Task<(string Uid, LoginState result, PatchListEntry[] PendingGamePatches)> RegisterSession(OauthLoginResult loginResult, DirectoryInfo gamePath, bool forceBaseVersion)
@@ -370,7 +399,8 @@ public class Launcher
         request.Headers.AddWithoutValidation("X-Hash-Check", "enabled");
         request.Headers.AddWithoutValidation("User-Agent", Constants.PatcherUserAgent);
 
-        EnsureVersionSanity(gamePath, loginResult.MaxExpansion);
+        if (!forceBaseVersion)
+            EnsureVersionSanity(gamePath, loginResult.MaxExpansion);
         request.Content = new StringContent(GetVersionReport(gamePath, loginResult.MaxExpansion, forceBaseVersion));
 
         var resp = await this.client.SendAsync(request);
@@ -380,8 +410,11 @@ public class Launcher
         if (resp.StatusCode == HttpStatusCode.Conflict)
             return (null, LoginState.NeedsPatchBoot, null);
 
+        if (resp.StatusCode == HttpStatusCode.Gone)
+            throw new InvalidResponseException("The server indicated that the version requested is no longer being serviced or not present.", text);
+
         if (!resp.Headers.TryGetValues("X-Patch-Unique-Id", out var uidVals))
-            throw new InvalidResponseException("Could not get X-Patch-Unique-Id.", text);
+            throw new InvalidResponseException($"Could not get X-Patch-Unique-Id. ({resp.StatusCode})", text);
 
         var uid = uidVals.First();
 
@@ -554,7 +587,7 @@ public class Launcher
     {
         var bytes = File.ReadAllBytes(file);
 
-        var hash = new SHA1Managed().ComputeHash(bytes);
+        var hash = SHA1.Create().ComputeHash(bytes);
         var hashstring = string.Join("", hash.Select(b => b.ToString("x2")).ToArray());
 
         var length = new FileInfo(file).Length;
@@ -568,7 +601,7 @@ public class Launcher
         {
             var reply = Encoding.UTF8.GetString(
                 await DownloadAsLauncher(
-                    $"https://frontier.ffxiv.com/worldStatus/gate_status.json?lang={language.GetLangCode()}&_={Util.GetUnixMillis()}", language).ConfigureAwait(true));
+                    $"https://frontier.ffxiv.com/worldStatus/gate_status.json?lang={language.GetLangCode()}&_={ApiHelpers.GetUnixMillis()}", language).ConfigureAwait(true));
 
             return JsonConvert.DeserializeObject<GateStatus>(reply);
         }
@@ -584,7 +617,7 @@ public class Launcher
         {
             var reply = Encoding.UTF8.GetString(
                 await DownloadAsLauncher(
-                    $"https://frontier.ffxiv.com/worldStatus/login_status.json?_={Util.GetUnixMillis()}", ClientLanguage.English).ConfigureAwait(true));
+                    $"https://frontier.ffxiv.com/worldStatus/login_status.json?_={ApiHelpers.GetUnixMillis()}", ClientLanguage.English).ConfigureAwait(true));
 
             return Convert.ToBoolean(int.Parse(reply[10].ToString()));
         }
@@ -638,7 +671,7 @@ public class Launcher
         var langCode = language.GetLangCode().Replace("-", "_");
         var formattedTime = GetLauncherFormattedTimeLong();
 
-        return $"https://launcher.finalfantasyxiv.com/v610/index.html?rc_lang={langCode}&time={formattedTime}";
+        return $"https://launcher.finalfantasyxiv.com/v620/index.html?rc_lang={langCode}&time={formattedTime}";
     }
 
     // Used to be used for frontier top, they now use the un-rounded long timestamp
@@ -648,7 +681,7 @@ public class Launcher
 
     private static string GetLauncherFormattedTimeLongRounded()
     {
-        var formatted = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm").ToCharArray();
+        var formatted = DateTime.UtcNow.ToString("yyyy-MM-dd-HH-mm", new CultureInfo("en-US")).ToCharArray();
         formatted[15] = '0';
 
         return new string(formatted);

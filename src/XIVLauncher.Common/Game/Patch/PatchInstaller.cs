@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 using Serilog;
 using XIVLauncher.Common.Game.Patch.PatchList;
@@ -48,7 +47,7 @@ namespace XIVLauncher.Common.Game.Patch
                 this.rpc = new SharedMemoryRpc(rpcName);
                 this.rpc.MessageReceived += RemoteCallHandler;
 
-                var path = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),
+                var path = Path.Combine(AppContext.BaseDirectory,
                     "XIVLauncher.PatchInstaller.exe");
 
                 var startInfo = new ProcessStartInfo(path);

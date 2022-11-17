@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Timers;
 using System.Windows;
+using System.Windows.Input;
 using CheapLoc;
 using XIVLauncher.Common.PlatformAbstractions;
+using XIVLauncher.Common.Util;
 using XIVLauncher.Windows.ViewModel;
 using XIVLauncher.Xaml;
 
@@ -42,6 +44,10 @@ namespace XIVLauncher.Windows
 
                     case IDalamudLoadingOverlay.DalamudUpdateStep.Runtime:
                         ProgressTextBlock.Text = Loc.Localize("DalamudUpdateRuntime", "Updating runtime...");
+                        break;
+
+                    case IDalamudLoadingOverlay.DalamudUpdateStep.Starting:
+                        ProgressTextBlock.Text = Loc.Localize("DalamudNowStarting", "Starting...");
                         break;
 
                     case IDalamudLoadingOverlay.DalamudUpdateStep.Unavailable:
@@ -92,6 +98,27 @@ namespace XIVLauncher.Windows
             });
         }
 
+        public void ReportProgress(long? size, long downloaded, double? progress)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (IsClosed)
+                    return;
+
+                if (progress == null || size == null)
+                {
+                    this.ProgressBar.IsIndeterminate = true;
+                    this.PercentageTextBlock.Text = string.Empty;
+                }
+                else
+                {
+                    this.ProgressBar.IsIndeterminate = false;
+                    this.ProgressBar.Value = progress.Value;
+                    this.PercentageTextBlock.Text = $"{progress.Value:0}% ({ApiHelpers.BytesToString(downloaded)}/{ApiHelpers.BytesToString(size.Value)})";
+                }
+            });
+        }
+
         private void DalamudLoadingOverlay_OnLoaded(object sender, RoutedEventArgs e)
         {
             HideFromWindowSwitcher.Hide(this);
@@ -103,6 +130,12 @@ namespace XIVLauncher.Windows
         {
             base.OnClosed(e);
             IsClosed = true;
+        }
+
+        protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+        {
+            base.OnMouseLeftButtonDown(e);
+            this.DragMove();
         }
     }
 }

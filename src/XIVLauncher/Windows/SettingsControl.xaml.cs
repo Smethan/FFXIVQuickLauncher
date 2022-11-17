@@ -17,6 +17,7 @@ using XIVLauncher.Common.Addon;
 using XIVLauncher.Common.Addon.Implementations;
 using XIVLauncher.Common.Dalamud;
 using XIVLauncher.Common.Game.Patch.Acquisition;
+using XIVLauncher.Common.Util;
 using XIVLauncher.Support;
 using XIVLauncher.Windows.ViewModel;
 
@@ -67,7 +68,6 @@ namespace XIVLauncher.Windows
             LauncherLanguageNoticeTextBlock.Visibility = Visibility.Hidden;
             AddonListView.ItemsSource = App.Settings.AddonList ??= new List<AddonEntry>();
             UidCacheCheckBox.IsChecked = App.Settings.UniqueIdCacheEnabled;
-            EncryptedArgumentsCheckbox.IsChecked = App.Settings.EncryptArguments;
             ExitLauncherAfterGameExitCheckbox.IsChecked = App.Settings.ExitLauncherAfterGameExit ?? true;
             TreatNonZeroExitCodeAsFailureCheckbox.IsChecked = App.Settings.TreatNonZeroExitCodeAsFailure ?? false;
             AskBeforePatchingCheckBox.IsChecked = App.Settings.AskBeforePatchInstall;
@@ -124,7 +124,6 @@ namespace XIVLauncher.Windows
 
             App.Settings.AddonList = (List<AddonEntry>)AddonListView.ItemsSource;
             App.Settings.UniqueIdCacheEnabled = UidCacheCheckBox.IsChecked == true;
-            App.Settings.EncryptArguments = EncryptedArgumentsCheckbox.IsChecked == true;
             App.Settings.ExitLauncherAfterGameExit = ExitLauncherAfterGameExitCheckbox.IsChecked == true;
             App.Settings.TreatNonZeroExitCodeAsFailure = TreatNonZeroExitCodeAsFailureCheckbox.IsChecked == true;
             App.Settings.AskBeforePatchInstall = AskBeforePatchingCheckBox.IsChecked == true;
@@ -175,7 +174,7 @@ namespace XIVLauncher.Windows
                                           .WithParentWindow(Window.GetWindow(this))
                                           .Show() == MessageBoxResult.Yes;
 
-            Util.StartOfficialLauncher(App.Settings.GamePath, isSteam, App.Settings.IsFt.GetValueOrDefault(false));
+            GameHelpers.StartOfficialLauncher(App.Settings.GamePath, isSteam, App.Settings.IsFt.GetValueOrDefault(false));
         }
 
         // All of the list handling is very dirty - but i guess it works
@@ -280,10 +279,16 @@ namespace XIVLauncher.Windows
                 {
                     switch (task.Result.compareResult)
                     {
-                        case IntegrityCheck.CompareResult.NoServer:
+                        case IntegrityCheck.CompareResult.ReferenceNotFound:
                             CustomMessageBox.Show(Loc.Localize("IntegrityCheckImpossible",
                                     "There is no reference report yet for this game version. Please try again later."),
                                 "XIVLauncher", MessageBoxButton.OK, MessageBoxImage.Asterisk, parentWindow: Window.GetWindow(this));
+                            return;
+
+                        case IntegrityCheck.CompareResult.ReferenceFetchFailure:
+                            CustomMessageBox.Show(Loc.Localize("IntegrityCheckNetworkError",
+                                    "Failed to download reference files for checking integrity. Check your internet connection and try again."),
+                                "XIVLauncher", MessageBoxButton.OK, MessageBoxImage.Error, parentWindow: Window.GetWindow(this));
                             return;
 
                         case IntegrityCheck.CompareResult.Invalid:
@@ -325,15 +330,17 @@ namespace XIVLauncher.Windows
         {
             try
             {
-                if (!string.IsNullOrEmpty(ViewModel.GamePath) && Util.IsValidFfxivPath(ViewModel.GamePath) && !DalamudLauncher.CanRunDalamud(new DirectoryInfo(ViewModel.GamePath)))
+                if (!string.IsNullOrEmpty(ViewModel.GamePath) && GameHelpers.IsValidGamePath(ViewModel.GamePath) && !DalamudLauncher.CanRunDalamud(new DirectoryInfo(ViewModel.GamePath)))
+                {
                     CustomMessageBox.Show(
-                        Loc.Localize("DalamudIncompatible", "Dalamud was not yet updated for your current FFXIV version.\nThis is common after patches, so please be patient or ask on the Discord for a status update!"),
+                        Loc.Localize("DalamudIncompatible", "Dalamud was not yet updated for your current game version.\nThis is common after patches, so please be patient or ask on the Discord for a status update!"),
                         "XIVLauncher", MessageBoxButton.OK, MessageBoxImage.Asterisk, parentWindow: Window.GetWindow(this));
+                }
             }
-            catch(Exception exc)
+            catch (Exception exc)
             {
                 CustomMessageBox.Show(Loc.Localize("DalamudCompatCheckFailed",
-                    "Could not contact the server to get the current compatible FFXIV version Dalamud. This might mean that your .NET installation is too old.\nPlease check the Discord for more information."), "XIVLauncher Problem", MessageBoxButton.OK, MessageBoxImage.Hand, parentWindow: Window.GetWindow(this));
+                    "Could not contact the server to get the current compatible game version for Dalamud. This might mean that your .NET installation is too old.\nPlease check the Discord for more information."), "XIVLauncher Problem", MessageBoxButton.OK, MessageBoxImage.Hand, parentWindow: Window.GetWindow(this));
 
                 Log.Error(exc, "Couldn't check dalamud compatibility.");
             }
@@ -344,9 +351,11 @@ namespace XIVLauncher.Windows
             string selectedPath = null;
 
             var definitionFiles = Directory.GetFiles(Path.Combine(Paths.RoamingPath, "installedPlugins"), "*.json", SearchOption.AllDirectories);
+
             foreach (var path in definitionFiles)
             {
                 dynamic definition = JObject.Parse(File.ReadAllText(path));
+
                 try
                 {
                     if (PluginListView.SelectedValue.ToString().Contains(definition.Name.Value + " " + definition.AssemblyVersion.Value))
@@ -374,7 +383,7 @@ namespace XIVLauncher.Windows
                 return;
             }
 
-            if (PluginListView.SelectedValue.ToString().Contains("(disabled)")) //If it's disabled...
+            if (PluginListView.SelectedValue.ToString().Contains(ViewModel.PluginDisabledTagLoc)) //If it's disabled...
             {
                 if (File.Exists(Path.Combine(pluginVersionPath, ".disabled")))
                 {
@@ -394,7 +403,7 @@ namespace XIVLauncher.Windows
 
         private void DeletePlugin_OnClick(object sender, RoutedEventArgs e)
         {
-            if(Util.CheckIsGameOpen())
+            if (GameHelpers.CheckIsGameOpen())
             {
                 CustomMessageBox.Show(Loc.Localize("GameIsOpenPluginLocked", "The game is open, please close it and try again."), "XIVLauncher Problem", parentWindow: Window.GetWindow(this));
                 return;
@@ -463,8 +472,7 @@ namespace XIVLauncher.Windows
 
                     if (isDisabled)
                     {
-                        PluginListView.Items.Add(pluginConfig.Name + " " + pluginConfig.AssemblyVersion +
-                                                 Loc.Localize("DisabledPlugin", " (disabled)"));
+                        PluginListView.Items.Add(pluginConfig.Name + " " + pluginConfig.AssemblyVersion + ViewModel.PluginDisabledTagLoc);
                     }
                     else
                     {
@@ -503,17 +511,33 @@ namespace XIVLauncher.Windows
 
         private void GamePathEntry_OnTextChanged(object sender, TextChangedEventArgs e)
         {
-            var isLetChoose = false;
+            var isBootOrGame = false;
+            var mightBeNonInternationalVersion = false;
+
             try
             {
-                isLetChoose = Util.LetChoosePath(ViewModel.GamePath);
+                isBootOrGame = !GameHelpers.LetChoosePath(ViewModel.GamePath);
+                mightBeNonInternationalVersion = GameHelpers.CanMightNotBeInternationalClient(ViewModel.GamePath);
             }
             catch (Exception ex)
             {
                 Log.Error(ex, "Could not check game path");
             }
 
-            GamePathSafeguardText.Visibility = !isLetChoose ? Visibility.Visible : Visibility.Collapsed;
+            if (isBootOrGame)
+            {
+                GamePathSafeguardText.Text = ViewModel.GamePathSafeguardLoc;
+                GamePathSafeguardText.Visibility = Visibility.Visible;
+            }
+            else if (mightBeNonInternationalVersion)
+            {
+                GamePathSafeguardText.Text = ViewModel.GamePathSafeguardRegionLoc;
+                GamePathSafeguardText.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                GamePathSafeguardText.Visibility = Visibility.Collapsed;
+            }
         }
 
         private void LicenseText_OnMouseUp(object sender, MouseButtonEventArgs e)

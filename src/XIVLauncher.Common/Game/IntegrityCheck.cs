@@ -4,8 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 
 namespace XIVLauncher.Common.Game
 {
@@ -29,7 +29,8 @@ namespace XIVLauncher.Common.Game
         {
             Valid,
             Invalid,
-            NoServer
+            ReferenceNotFound,
+            ReferenceFetchFailure,
         }
 
         public static async Task<(CompareResult compareResult, string report, IntegrityCheckResult remoteIntegrity)>
@@ -41,18 +42,21 @@ namespace XIVLauncher.Common.Game
             {
                 remoteIntegrity = DownloadIntegrityCheckForVersion(Repository.Ffxiv.GetVer(gamePath));
             }
-            catch (WebException)
+            catch (WebException e)
             {
-                return (CompareResult.NoServer, null, null);
+                if (e.Response is HttpWebResponse resp && resp.StatusCode == HttpStatusCode.NotFound)
+                    return (CompareResult.ReferenceNotFound, null, null);
+                return (CompareResult.ReferenceFetchFailure, null, null);
             }
 
-            var localIntegrity = await RunIntegrityCheckAsync(gamePath, progress, onlyIndex);
+            var localIntegrity = await RunIntegrityCheckAsync(gamePath, progress, onlyIndex).ConfigureAwait(false);
 
             var report = "";
             var failed = false;
+
             foreach (var hashEntry in remoteIntegrity.Hashes)
             {
-                if (onlyIndex && (!hashEntry.Key.EndsWith(".index") && !hashEntry.Key.EndsWith(".index2")))
+                if (onlyIndex && (!hashEntry.Key.EndsWith(".index", StringComparison.Ordinal) && !hashEntry.Key.EndsWith(".index2", StringComparison.Ordinal)))
                     continue;
 
                 if (localIntegrity.Hashes.Any(h => h.Key == hashEntry.Key))
@@ -69,25 +73,24 @@ namespace XIVLauncher.Common.Game
                 }
             }
 
-            return (failed ? CompareResult.Invalid : CompareResult.Valid, report,
-                remoteIntegrity);
+            return (failed ? CompareResult.Invalid : CompareResult.Valid, report, remoteIntegrity);
         }
 
         private static IntegrityCheckResult DownloadIntegrityCheckForVersion(string gameVersion)
         {
             using (var client = new WebClient())
             {
-                return JsonConvert.DeserializeObject<IntegrityCheckResult>(
+                return JsonSerializer.Deserialize<IntegrityCheckResult>(
                     client.DownloadString(INTEGRITY_CHECK_BASE_URL + gameVersion + ".json"));
             }
         }
 
         public static async Task<IntegrityCheckResult> RunIntegrityCheckAsync(DirectoryInfo gamePath,
-            IProgress<IntegrityCheckProgress> progress, bool onlyIndex = false)
+                                                                              IProgress<IntegrityCheckProgress> progress, bool onlyIndex = false)
         {
             var hashes = new Dictionary<string, string>();
 
-            using (var sha1 = new SHA1Managed())
+            using (var sha1 = SHA1.Create())
             {
                 CheckDirectory(gamePath, sha1, gamePath.FullName, ref hashes, progress, onlyIndex);
             }
@@ -99,20 +102,23 @@ namespace XIVLauncher.Common.Game
             };
         }
 
-        private static void CheckDirectory(DirectoryInfo directory, SHA1Managed sha1, string rootDirectory,
+        private static void CheckDirectory(DirectoryInfo directory, SHA1 sha1, string rootDirectory,
                                            ref Dictionary<string, string> results, IProgress<IntegrityCheckProgress> progress, bool onlyIndex = false)
         {
             foreach (var file in directory.GetFiles())
             {
                 var relativePath = file.FullName.Substring(rootDirectory.Length);
 
-                if (!relativePath.StartsWith("\\"))
+                // for unix compatibility with windows-generated integrity files.
+                relativePath = relativePath.Replace("/", "\\");
+
+                if (!relativePath.StartsWith("\\", StringComparison.Ordinal))
                     relativePath = "\\" + relativePath;
 
-                if (!relativePath.StartsWith("\\game"))
+                if (!relativePath.StartsWith("\\game", StringComparison.Ordinal))
                     continue;
 
-                if (onlyIndex && (!relativePath.EndsWith(".index") && !relativePath.EndsWith(".index2")))
+                if (onlyIndex && (!relativePath.EndsWith(".index", StringComparison.Ordinal) && !relativePath.EndsWith(".index2", StringComparison.Ordinal)))
                     continue;
 
                 try
@@ -137,7 +143,10 @@ namespace XIVLauncher.Common.Game
             }
 
             foreach (var dir in directory.GetDirectories())
-                CheckDirectory(dir, sha1, rootDirectory, ref results, progress, onlyIndex);
+            {
+                if (!dir.FullName.ToLower().Contains("shade")) //skip gshade directories. They just waste cpu
+                    CheckDirectory(dir, sha1, rootDirectory, ref results, progress, onlyIndex);
+            }
         }
     }
 }

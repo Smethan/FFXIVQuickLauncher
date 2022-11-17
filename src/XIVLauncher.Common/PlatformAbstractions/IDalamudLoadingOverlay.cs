@@ -7,7 +7,8 @@ public interface IDalamudLoadingOverlay
         Dalamud,
         Assets,
         Runtime,
-        Unavailable
+        Unavailable,
+        Starting,
     }
 
     public void SetStep(DalamudUpdateStep step);
@@ -15,4 +16,6 @@ public interface IDalamudLoadingOverlay
     public void SetVisible();
 
     public void SetInvisible();
+
+    public void ReportProgress(long? size, long downloaded, double? progress);
 }

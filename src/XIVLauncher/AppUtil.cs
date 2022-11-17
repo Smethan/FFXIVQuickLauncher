@@ -4,8 +4,15 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Windows;
+using CheapLoc;
 using Microsoft.Win32;
 using XIVLauncher.Common;
+using XIVLauncher.Common.Game.Patch;
+using XIVLauncher.Common.Util;
+using XIVLauncher.Common.Windows;
+using XIVLauncher.PlatformAbstractions;
+using XIVLauncher.Windows;
 
 namespace XIVLauncher
 {
@@ -49,9 +56,9 @@ namespace XIVLauncher
             return reader.ReadToEnd();
         }
 
-        private static readonly string defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "SquareEnix\\FINAL FANTASY XIV - A Realm Reborn");
+        private static string GetDefaultPath(string companyName, string gameName) => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), $"{companyName}\\{gameName}");
 
-        private static string[] GetCommonPaths()
+        private static string[] GetCommonPaths(string companyName1, string companyName2, string gameName, string rebootName)
         {
             var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
             var paths = new List<string>();
@@ -59,12 +66,12 @@ namespace XIVLauncher
 
             var commonPaths = new string[]
             {
-                "Steam\\steamapps\\common\\FINAL FANTASY XIV Online",
-                "Steam\\steamapps\\common\\FINAL FANTASY XIV - A Realm Reborn",
-                "SquareEnix\\FINAL FANTASY XIV - A Realm Reborn",
-                "Square Enix\\FINAL FANTASY XIV - A Realm Reborn",
-                "Games\\SquareEnix\\FINAL FANTASY XIV - A Realm Reborn",
-                "Games\\Square Enix\\FINAL FANTASY XIV - A Realm Reborn",
+                $"Steam\\steamapps\\common\\{gameName} Online",
+                $"Steam\\steamapps\\common\\{gameName} - {rebootName}",
+                $"{companyName1}{companyName2}\\{gameName} - {rebootName}",
+                $"\\{gameName} - {rebootName}",
+                $"Games\\{companyName1}{companyName2}\\{gameName} - {rebootName}",
+                $"Games\\{companyName1} {companyName2}\\{gameName} - {rebootName}",
             };
 
             foreach (var commonPath in commonPaths)
@@ -78,7 +85,7 @@ namespace XIVLauncher
                 }
             }
 
-            paths.Add(Path.Combine(programFiles, "FINAL FANTASY XIV - A Realm Reborn"));
+            paths.Add(Path.Combine(programFiles, $"{gameName} - {rebootName}"));
 
             return paths.ToArray();
         }
@@ -90,13 +97,20 @@ namespace XIVLauncher
 
         public static string TryGamePaths()
         {
+            const string CN_1 = "Square";
+            const string CN_2 = "Enix";
+            const string GN = "FINAL FANTASY XIV";
+            const string RN = "A Realm Reborn";
+
+            var defaultPath = GetDefaultPath($"{CN_1}{CN_2}", $"{GN} - {RN}");
+
             try
             {
                 var foundVersions = new Dictionary<string, SeVersion>();
 
-                foreach (var path in GetCommonPaths())
+                foreach (var path in GetCommonPaths(CN_1, CN_2, GN, RN))
                 {
-                    if (!Directory.Exists(path) || !Util.IsValidFfxivPath(path) || foundVersions.ContainsKey(path))
+                    if (!Directory.Exists(path) || !GameHelpers.IsValidGamePath(path) || foundVersions.ContainsKey(path))
                         continue;
 
                     var baseVersion = Repository.Ffxiv.GetVer(new DirectoryInfo(path));
@@ -107,7 +121,7 @@ namespace XIVLauncher
                 {
                     using (var hklm = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, registryView))
                     {
-                        // Should return "C:\Program Files (x86)\SquareEnix\FINAL FANTASY XIV - A Realm Reborn\boot\ffxivboot.exe" if installed with default options.
+                        // Should return "C:\Program Files (x86)\company\game\boot\ffxivboot.exe" if installed with default options.
                         using (var subkey = hklm.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{2B41E132-07DF-4925-A3D3-F2D1765CCDFE}"))
                         {
                             if (subkey != null && subkey.GetValue("DisplayIcon", null) is string path)
@@ -115,7 +129,7 @@ namespace XIVLauncher
                                 // DisplayIcon includes "boot\ffxivboot.exe", need to remove it
                                 path = Directory.GetParent(path).Parent.FullName;
 
-                                if (Directory.Exists(path) && Util.IsValidFfxivPath(path) && !foundVersions.ContainsKey(path))
+                                if (Directory.Exists(path) && GameHelpers.IsValidGamePath(path) && !foundVersions.ContainsKey(path))
                                 {
                                     var baseVersion = Repository.Ffxiv.GetVer(new DirectoryInfo(path));
                                     foundVersions.Add(path, SeVersion.Parse(baseVersion));
@@ -123,14 +137,14 @@ namespace XIVLauncher
                             }
                         }
 
-                        // Should return "C:\Program Files (x86)\Steam\steamapps\common\FINAL FANTASY XIV Online" if installed with default options.
+                        // Should return "C:\Program Files (x86)\Steam\steamapps\common\game Online" if installed with default options.
                         foreach (var steamAppId in ValidSteamAppIds)
                         {
                             using (var subkey = hklm.OpenSubKey($@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App {steamAppId}"))
                             {
                                 if (subkey != null && subkey.GetValue("InstallLocation", null) is string path)
                                 {
-                                    if (Directory.Exists(path) && Util.IsValidFfxivPath(path) && !foundVersions.ContainsKey(path))
+                                    if (Directory.Exists(path) && GameHelpers.IsValidGamePath(path) && !foundVersions.ContainsKey(path))
                                     {
                                         // InstallLocation is the root path of the game (the one containing boot and game) itself
                                         var baseVersion = Repository.Ffxiv.GetVer(new DirectoryInfo(path));
@@ -139,7 +153,6 @@ namespace XIVLauncher
                                 }
                             }
                         }
-
                     }
                 }
 
@@ -149,6 +162,72 @@ namespace XIVLauncher
             {
                 return defaultPath;
             }
+        }
+
+        /// <summary>
+        /// Check if any file in the game directory is currently being used, and yell at the user if any.
+        /// 
+        /// This function works on best effort basis, and is slow.
+        /// </summary>
+        /// <param name="parentWindow">Parent window.</param>
+        /// <param name="messageGenerator">Function that returns the relevant message.</param>
+        /// <returns>False if cancelled.</returns>
+        public static bool TryYellOnGameFilesBeingOpen(Window parentWindow, Func<int, string> messageGenerator)
+        {
+            try
+            {
+                while (true)
+                {
+                    using var restartManager = new WindowsRestartManager();
+                    restartManager.Register(files: PatchVerifier.GetRelevantFiles(Path.Combine(CommonSettings.Instance.GamePath.FullName, "game")));
+                    List<WindowsRestartManager.RmProcessInfo> programs = restartManager.GetInterferingProcesses(out _);
+
+                    if (!programs.Any())
+                        break;
+
+                    switch (CustomMessageBox
+                            .Builder
+                            .NewFrom(messageGenerator(programs.Count))
+                            .WithDescription(string.Join("\n",
+                                programs
+                                    .Select(x =>
+                                    {
+                                        var process = x.Process;
+                                        if (process == null)
+                                            return $"{x.AppName} ({x.UniqueProcess.dwProcessId})";
+
+                                        string exeName = process.MainModule?.ModuleName ?? "??";
+                                        string title = process.MainWindowTitle;
+                                        if (string.IsNullOrEmpty(title) || title == x.AppName)
+                                            return $"{x.AppName} ({x.UniqueProcess.dwProcessId}: {exeName})";
+
+                                        return $"{x.AppName} ({x.UniqueProcess.dwProcessId}: {exeName}, \"{title}\")";
+                                    })))
+                            .WithImage(MessageBoxImage.Information)
+                            .WithButtons(MessageBoxButton.YesNoCancel)
+                            .WithYesButtonText(Loc.Localize("Refresh", "_Refresh"))
+                            .WithNoButtonText(Loc.Localize("Ignore", "_Ignore"))
+                            .WithDefaultResult(MessageBoxResult.Yes)
+                            .WithParentWindow(parentWindow)
+                            .Show())
+                    {
+                        case MessageBoxResult.Yes:
+                            break;
+
+                        case MessageBoxResult.No:
+                            return true;
+
+                        case MessageBoxResult.Cancel:
+                            return false;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // ignore, as this is on a best-effort basis anyway.
+            }
+
+            return true;
         }
     }
 }

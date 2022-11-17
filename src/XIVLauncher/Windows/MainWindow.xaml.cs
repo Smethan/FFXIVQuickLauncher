@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -17,6 +18,7 @@ using XIVLauncher.Common;
 using XIVLauncher.Common.Dalamud;
 using XIVLauncher.Common.Game;
 using XIVLauncher.Common.Game.Patch.Acquisition;
+using XIVLauncher.Common.Util;
 using XIVLauncher.Support;
 using XIVLauncher.Windows.ViewModel;
 using Timer = System.Timers.Timer;
@@ -32,6 +34,14 @@ namespace XIVLauncher.Windows
         private Headlines _headlines;
         private BitmapImage[] _bannerBitmaps;
         private int _currentBannerIndex;
+
+        class BannerDotInfo
+        {
+            public bool Active { get; set; }
+            public int Index { get; set; }
+        }
+
+        private ObservableCollection<BannerDotInfo> _bannerDotList;
 
         private Timer _maintenanceQueueTimer;
 
@@ -111,6 +121,7 @@ namespace XIVLauncher.Windows
                 _headlines = await Headlines.Get(_launcher, App.Settings.Language.GetValueOrDefault(ClientLanguage.English));
 
                 _bannerBitmaps = new BitmapImage[_headlines.Banner.Length];
+                _bannerDotList = new();
 
                 for (var i = 0; i < _headlines.Banner.Length; i++)
                 {
@@ -126,22 +137,34 @@ namespace XIVLauncher.Windows
                     bitmapImage.Freeze();
 
                     _bannerBitmaps[i] = bitmapImage;
+                    _bannerDotList.Add(new() { Index = i });
                 }
 
-                Dispatcher.BeginInvoke(new Action(() => { BannerImage.Source = _bannerBitmaps[0]; }));
+                _bannerDotList[0].Active = true;
+
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    BannerImage.Source = _bannerBitmaps[0];
+                    BannerDot.ItemsSource = _bannerDotList;
+                }));
 
                 _bannerChangeTimer = new Timer {Interval = 5000};
 
                 _bannerChangeTimer.Elapsed += (o, args) =>
                 {
+                    _bannerDotList.ToList().ForEach(x => x.Active = false);
+
                     if (_currentBannerIndex + 1 > _headlines.Banner.Length - 1)
                         _currentBannerIndex = 0;
                     else
                         _currentBannerIndex++;
 
+                    _bannerDotList[_currentBannerIndex].Active = true;
+
                     Dispatcher.BeginInvoke(new Action(() =>
                     {
                         BannerImage.Source = _bannerBitmaps[_currentBannerIndex];
+                        BannerDot.ItemsSource = _bannerDotList.ToList();
                     }));
                 };
 
@@ -343,13 +366,14 @@ namespace XIVLauncher.Windows
             else
             {
                 string url;
+
                 switch (App.Settings.Language)
                 {
                     case ClientLanguage.Japanese:
                         url = "https://jp.finalfantasyxiv.com/lodestone/news/detail/";
                         break;
 
-                    case ClientLanguage.English when Util.IsRegionNorthAmerica():
+                    case ClientLanguage.English when GameHelpers.IsRegionNorthAmerica():
                         url = "https://na.finalfantasyxiv.com/lodestone/news/detail/";
                         break;
 
@@ -430,7 +454,7 @@ namespace XIVLauncher.Windows
                 if (bootPatches != null)
                 {
                     CustomMessageBox.Show(Loc.Localize("MaintenanceQueueBootPatch",
-                        "A patch for the FFXIV launcher was detected.\nThis usually means that there is a patch for the game as well.\n\nYou will now be logged in."), "XIVLauncher", parentWindow: this);
+                        "A patch for the official launcher was detected.\nThis usually means that there is a patch for the game as well.\n\nYou will now be logged in."), "XIVLauncher", parentWindow: this);
                 }
 
                 Dispatcher.Invoke(() =>
@@ -481,10 +505,17 @@ namespace XIVLauncher.Windows
         {
             var switcher = new AccountSwitcher(_accountManager);
 
-            switcher.WindowStartupLocation = WindowStartupLocation.Manual;
-            var location = PointToScreen(Mouse.GetPosition(this));
-            switcher.Left = location.X - 15;
-            switcher.Top = location.Y - 15;
+            var locationFromScreen = AccountSwitcherButton.PointToScreen(new Point(0, 0));
+            var source = PresentationSource.FromVisual(this);
+
+            if (source != null)
+            {
+                var targetPoints = source.CompositionTarget!.TransformFromDevice.Transform(locationFromScreen);
+
+                switcher.WindowStartupLocation = WindowStartupLocation.Manual;
+                switcher.Left = targetPoints.X - 15;
+                switcher.Top = targetPoints.Y - 15;
+            }
 
             switcher.OnAccountSwitchedEventHandler += OnAccountSwitchedEventHandler;
 
@@ -531,13 +562,27 @@ namespace XIVLauncher.Windows
                 },
                 State = Launcher.LoginState.Ok,
                 UniqueId = "0"
-            }, false, false).ConfigureAwait(false);
+            }, false, false, false).ConfigureAwait(false);
         }
 
         private void LoginPassword_OnPasswordChanged(object sender, RoutedEventArgs e)
         {
             if (this.DataContext != null)
                 ((MainWindowViewModel)this.DataContext).Password = ((PasswordBox)sender).Password;
+        }
+
+        private void RadioButton_MouseEnter(object sender, MouseEventArgs e)
+        {
+            ((RadioButton)sender).IsChecked = true;
+            _currentBannerIndex = _bannerDotList.FirstOrDefault(x => x.Active)?.Index ?? _currentBannerIndex;
+            Dispatcher.BeginInvoke(new Action(() => BannerImage.Source = _bannerBitmaps[_currentBannerIndex]));
+
+            _bannerChangeTimer.Stop();
+        }
+
+        private void RadioButton_MouseLeave(object sender, MouseEventArgs e)
+        {
+            _bannerChangeTimer.Start();
         }
     }
 }

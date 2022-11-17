@@ -4,10 +4,12 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using Newtonsoft.Json;
 using Serilog;
 using System.Security.Cryptography;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using XIVLauncher.Common.Util;
 
 namespace XIVLauncher.Common.Dalamud
 {
@@ -17,18 +19,26 @@ namespace XIVLauncher.Common.Dalamud
 
         internal class AssetInfo
         {
+            [JsonPropertyName("version")]
             public int Version { get; set; }
+
+            [JsonPropertyName("assets")]
             public IReadOnlyList<Asset> Assets { get; set; }
 
             public class Asset
             {
+                [JsonPropertyName("url")]
                 public string Url { get; set; }
+
+                [JsonPropertyName("fileName")]
                 public string FileName { get; set; }
+
+                [JsonPropertyName("hash")]
                 public string Hash { get; set; }
             }
         }
 
-        public static async Task<DirectoryInfo> EnsureAssets(DirectoryInfo baseDir)
+        public static async Task<DirectoryInfo> EnsureAssets(DirectoryInfo baseDir, bool forceProxy)
         {
             using var client = new HttpClient
             {
@@ -87,9 +97,16 @@ namespace XIVLauncher.Common.Dalamud
 
                 if (!File.Exists(filePath) || isRefreshNeeded || refreshFile)
                 {
-                    Log.Verbose("[DASSET] Downloading {0} to {1}...", entry.Url, entry.FileName);
+                    var url = entry.Url;
 
-                    var request = await client.GetAsync(entry.Url + "?t=" + DateTime.Now.Ticks).ConfigureAwait(true);
+                    if (forceProxy && url.Contains("/File/Get/"))
+                    {
+                        url = url.Replace("/File/Get/", "/File/GetProxy/");
+                    }
+
+                    Log.Verbose("[DASSET] Downloading {0} to {1}...", url, entry.FileName);
+
+                    var request = await client.GetAsync(url).ConfigureAwait(true);
                     request.EnsureSuccessStatusCode();
                     File.WriteAllBytes(filePath, await request.Content.ReadAsByteArrayAsync().ConfigureAwait(true));
 
@@ -143,7 +160,7 @@ namespace XIVLauncher.Common.Dalamud
                 Log.Error(ex, "[DASSET] Could not read asset.ver");
             }
 
-            var remoteVer = JsonConvert.DeserializeObject<AssetInfo>(client.DownloadString(ASSET_STORE_URL));
+            var remoteVer = JsonSerializer.Deserialize<AssetInfo>(client.DownloadString(ASSET_STORE_URL));
 
             Log.Verbose("[DASSET] Ver check - local:{0} remote:{1}", localVer, remoteVer.Version);
 
@@ -167,7 +184,7 @@ namespace XIVLauncher.Common.Dalamud
 
         private static void CleanUpOld(DirectoryInfo baseDir, int version)
         {
-            if (Util.CheckIsGameOpen())
+            if (GameHelpers.CheckIsGameOpen())
                 return;
 
             var toDelete = Path.Combine(baseDir.FullName, version.ToString());

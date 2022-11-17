@@ -2,7 +2,7 @@
 
 Read in: [日本語](https://github.com/goatcorp/FFXIVQuickLauncher/wiki/Info-(Japanese)) | [Français](https://github.com/goatcorp/FFXIVQuickLauncher/wiki/Info-(French)) | [Deutsch](https://github.com/goatcorp/FFXIVQuickLauncher/wiki/Info-(German)) | [Español](https://github.com/goatcorp/FFXIVQuickLauncher/wiki/Info-(Spanish)) | [简体中文](https://github.com/goatcorp/FFXIVQuickLauncher/wiki/Info-(Chinese-Simplified)) | [繁體中文](https://github.com/goatcorp/FFXIVQuickLauncher/wiki/Info-(Chinese-Traditional)) | [한국어](https://github.com/goatcorp/FFXIVQuickLauncher/wiki/Info-(Korean)) | [Italiano](https://github.com/goatcorp/FFXIVQuickLauncher/wiki/Info-(Italian))
 
-XIVLauncher (abbreviated as XL) is a faster launcher for FFXIV, with various available addons and enhancements to the game!
+XIVLauncher (abbreviated as XL) is a faster launcher for our favorite critically acclaimed MMO, with various available addons and enhancements to the game!
 
 <p align="center">
   <a href="https://github.com/goatcorp/FFXIVQuickLauncher/releases">
@@ -12,7 +12,7 @@ XIVLauncher (abbreviated as XL) is a faster launcher for FFXIV, with various ava
 
 ## Why?
 
-The original FFXIV launcher is slow and cannot save your password. This project aims to fix that and add some QoL features to the game, such as:
+The original launcher is slow and cannot save your password. This project aims to fix that and add some QoL features to the game, such as:
 
 * Auto-login
 * Fast patching
@@ -28,6 +28,11 @@ The original FFXIV launcher is slow and cannot save your password. This project 
 To uninstall, you can use the Windows Programs & Apps menu or right click XIVLauncher in your start menu.
 
 ⚠ <b>Attention!</b> If you receive errors during the installation or if the launcher doesn't work correctly, make sure to <b>check your antivirus</b> first and disable it for XIVLauncher. Many commercial antivirus programs detect XIVLauncher as a false positive. You can check for yourself on VirusTotal. If you need any help with this, please [check our FAQ](https://goatcorp.github.io/faq/xl_troubleshooting#q-how-do-i-whitelist-xivlauncher-and-dalamud-so-my-antivirus-leaves-them-alone) or join our Discord channel.
+
+## On Steam Deck and Desktop Linux
+XIVLauncher now has a native Linux version that works on Steam Deck and Desktop Linux - no more messing around with scripts and command lines, just a few easy steps to install the game and add it to Steam, with a wine version especially tuned to XIV.
+
+Please see a guide here: https://goatcorp.github.io/faq/steamdeck
 
 ## How to install plugins
 XIVLauncher supports the installation of __plugins/addons__ made by __third-party developers__ in-game.
@@ -65,6 +70,6 @@ We feel like that this offers developers the __freedom to improve the game's fun
 <br>
 
 ## Disclaimer
-XIVLauncher is not in-line with Square Enix ToS. We are doing our best to make it safe to use for everyone, and to our knowledge, no one ever got into trouble for using XIVLauncher, but please be aware that it is a possibility.<br>You can read through our [FAQ entry](https://goatcorp.github.io/faq/xl_troubleshooting#q-are-xivlauncher-dalamud-and-dalamud-plugins-safe-to-use) on this matter if you want to know more.
+XIVLauncher is not in-line with the game's ToS. We are doing our best to make it safe to use for everyone, and to our knowledge, no one ever got into trouble for using XIVLauncher, but please be aware that it is a possibility.<br>You can read through our [FAQ entry](https://goatcorp.github.io/faq/xl_troubleshooting#q-are-xivlauncher-dalamud-and-dalamud-plugins-safe-to-use) on this matter if you want to know more.
 
 ##### FINAL FANTASY is a registered trademark of Square Enix Holdings Co., Ltd. FINAL FANTASY XIV © 2010-2022 SQUARE ENIX CO., LTD. All Rights Reserved. We are not affiliated with SQUARE ENIX CO., LTD. in any way.

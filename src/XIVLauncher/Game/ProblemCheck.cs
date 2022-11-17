@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Principal;
 using System.Windows;
 using CheapLoc;
 using Microsoft.Win32;
 using Serilog;
 using XIVLauncher.Common;
+using XIVLauncher.Common.Util;
 using XIVLauncher.Windows;
 
 namespace XIVLauncher.Game
@@ -21,9 +21,6 @@ namespace XIVLauncher.Game
         {
             if (EnvironmentSettings.IsWine)
                 return;
-
-            var runningAsAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent())
-                .IsInRole(WindowsBuiltInRole.Administrator);
 
             var compatFlagKey = Registry.CurrentUser.OpenSubKey(
                 "Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers", true);
@@ -44,7 +41,7 @@ namespace XIVLauncher.Game
                 {
                     var result = CustomMessageBox.Show(
                         Loc.Localize("AdminCheck",
-                            "XIVLauncher and/or FINAL FANTASY XIV are set to run as administrator.\nThis can cause various issues, including addons failing to launch and hotkey applications failing to respond.\n\nDo you want to fix this issue automatically?"),
+                            "XIVLauncher and/or the game are set to run as administrator.\nThis can cause various issues, including addons failing to launch and hotkey applications failing to respond.\n\nDo you want to fix this issue automatically?"),
                         "XIVLauncher", MessageBoxButton.OKCancel, MessageBoxImage.Exclamation, parentWindow: parentWindow);
 
                     if (result != MessageBoxResult.OK)
@@ -61,7 +58,7 @@ namespace XIVLauncher.Game
                 App.Settings.HasComplainedAboutAdmin = true;
             }
 
-            if (runningAsAdmin && !App.Settings.HasComplainedAboutAdmin.GetValueOrDefault(false) && !EnvironmentSettings.IsWine)
+            if (PlatformHelpers.IsElevated() && !App.Settings.HasComplainedAboutAdmin.GetValueOrDefault(false) && !EnvironmentSettings.IsWine)
             {
                 CustomMessageBox.Show(
                     Loc.Localize("AdminCheckNag",
@@ -76,7 +73,7 @@ namespace XIVLauncher.Game
             {
                 CustomMessageBox.Show(
                     Loc.Localize("MacTypeNag",
-                        "MacType was detected on this PC.\nIt will cause problems with FFXIV; both the official launcher and XIVLauncher.\n\nPlease exclude XIVLauncher, ffxivboot, ffxivlauncher, ffxivupdater and ffxiv_dx11 from MacType."),
+                        "MacType was detected on this PC.\nIt will cause problems with the game; both on the official launcher and XIVLauncher.\n\nPlease exclude XIVLauncher, ffxivboot, ffxivlauncher, ffxivupdater and ffxiv_dx11 from MacType."),
                     "XIVLauncher Problem", MessageBoxButton.OK, MessageBoxImage.Error, parentWindow: parentWindow);
                 Environment.Exit(-1);
             }
@@ -85,7 +82,7 @@ namespace XIVLauncher.Game
             {
                 CustomMessageBox.Show(
                     Loc.Localize("MyGamesWriteAccessNag",
-                        "You do not have permission to write to FFXIV's My Games folder.\nThis will prevent screenshots and some character data from being saved.\n\nThis may be caused by either your antivirus or a permissions error. Please check your My Games folder permissions."),
+                        "You do not have permission to write to the game's My Games folder.\nThis will prevent screenshots and some character data from being saved.\n\nThis may be caused by either your antivirus or a permissions error. Please check your My Games folder permissions."),
                     "XIVLauncher Problem", MessageBoxButton.OK, MessageBoxImage.Exclamation, parentWindow: parentWindow);
             }
 
@@ -135,8 +132,8 @@ namespace XIVLauncher.Game
                 var dxgiInfo = FileVersionInfo.GetVersionInfo(dxgi.FullName);
                 var d3d11Info = FileVersionInfo.GetVersionInfo(d3d11.FullName);
 
-                if (dxgiInfo.ProductName.Equals("GShade", StringComparison.OrdinalIgnoreCase) &&
-                    d3d11Info.ProductName.Equals("GShade", StringComparison.OrdinalIgnoreCase))
+                if (dxgiInfo.ProductName?.Equals("GShade", StringComparison.OrdinalIgnoreCase) == true &&
+                    d3d11Info.ProductName?.Equals("GShade", StringComparison.OrdinalIgnoreCase) == true)
                 {
                     if (CustomMessageBox.Builder
                                         .NewFrom(Loc.Localize("GShadeError",
@@ -293,8 +290,15 @@ namespace XIVLauncher.Game
         {
             // Create a randomly-named file in the game's user data folder and make sure we don't
             // get a permissions error.
-            var myDocuments = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            var tempFile = Path.Combine(myDocuments, "my games", "FINAL FANTASY XIV - A Realm Reborn", Guid.NewGuid().ToString());
+            var myGames = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "my games");
+            if (!Directory.Exists(myGames))
+                return true;
+
+            var targetPath = Directory.GetDirectories(myGames).FirstOrDefault(x => Path.GetDirectoryName(x)?.Length == 34);
+            if (targetPath == null)
+                return true;
+
+            var tempFile = Path.Combine(targetPath, Guid.NewGuid().ToString());
 
             try
             {
