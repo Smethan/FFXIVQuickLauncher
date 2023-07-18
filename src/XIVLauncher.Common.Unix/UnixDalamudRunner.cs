@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Serilog;
@@ -22,7 +23,7 @@ public class UnixDalamudRunner : IDalamudRunner
         this.dotnetRuntime = dotnetRuntime;
     }
 
-    public Process? Run(FileInfo runner, bool fakeLogin, FileInfo gameExe, string gameArgs, IDictionary<string, string> environment, DalamudLoadMethod loadMethod, DalamudStartInfo startInfo)
+    public Process? Run(FileInfo runner, bool fakeLogin, bool noPlugins, bool noThirdPlugins, FileInfo gameExe, string gameArgs, IDictionary<string, string> environment, DalamudLoadMethod loadMethod, DalamudStartInfo startInfo)
     {
         var gameExePath = "";
         var dotnetRuntimePath = "";
@@ -30,10 +31,10 @@ public class UnixDalamudRunner : IDalamudRunner
         Parallel.Invoke(
             () => { gameExePath = compatibility.UnixToWinePath(gameExe.FullName); },
             () => { dotnetRuntimePath = compatibility.UnixToWinePath(dotnetRuntime.FullName); },
+            () => { startInfo.LoggingPath = compatibility.UnixToWinePath(startInfo.LoggingPath); },
             () => { startInfo.WorkingDirectory = compatibility.UnixToWinePath(startInfo.WorkingDirectory); },
             () => { startInfo.ConfigurationPath = compatibility.UnixToWinePath(startInfo.ConfigurationPath); },
             () => { startInfo.PluginDirectory = compatibility.UnixToWinePath(startInfo.PluginDirectory); },
-            () => { startInfo.DefaultPluginDirectory = compatibility.UnixToWinePath(startInfo.DefaultPluginDirectory); },
             () => { startInfo.AssetDirectory = compatibility.UnixToWinePath(startInfo.AssetDirectory); }
         );
 
@@ -41,35 +42,55 @@ public class UnixDalamudRunner : IDalamudRunner
         if (string.IsNullOrWhiteSpace(prevDalamudRuntime))
             environment.Add("DALAMUD_RUNTIME", dotnetRuntimePath);
 
-        var launchArguments = new List<string> 
-        { 
-            $"\"{runner.FullName}\"", 
-            "launch",
-            $"--mode={(loadMethod == DalamudLoadMethod.EntryPoint ? "entrypoint" : "inject")}",
-            $"--game=\"{gameExePath}\"",
-            $"--dalamud-working-directory=\"{startInfo.WorkingDirectory}\"",
-            $"--dalamud-configuration-path=\"{startInfo.ConfigurationPath}\"",
-            $"--dalamud-plugin-directory=\"{startInfo.PluginDirectory}\"",
-            $"--dalamud-dev-plugin-directory=\"{startInfo.DefaultPluginDirectory}\"",
-            $"--dalamud-asset-directory=\"{startInfo.AssetDirectory}\"",
-            $"--dalamud-client-language={(int)startInfo.Language}",
-            $"--dalamud-delay-initialize={startInfo.DelayInitializeMs}"
+        var launchArguments = new List<string>
+        {
+            $"\"{runner.FullName}\"",
+            DalamudInjectorArgs.LAUNCH,
+            DalamudInjectorArgs.Mode(loadMethod == DalamudLoadMethod.EntryPoint ? "entrypoint" : "inject"),
+            DalamudInjectorArgs.Game(gameExePath),
+            DalamudInjectorArgs.WorkingDirectory(startInfo.WorkingDirectory),
+            DalamudInjectorArgs.ConfigurationPath(startInfo.ConfigurationPath),
+            DalamudInjectorArgs.LoggingPath(startInfo.LoggingPath),
+            DalamudInjectorArgs.PluginDirectory(startInfo.PluginDirectory),
+            DalamudInjectorArgs.AssetDirectory(startInfo.AssetDirectory),
+            DalamudInjectorArgs.ClientLanguage((int)startInfo.Language),
+            DalamudInjectorArgs.DelayInitialize(startInfo.DelayInitializeMs),
+            DalamudInjectorArgs.TsPackB64(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(startInfo.TroubleshootingPackData))),
         };
 
         if (loadMethod == DalamudLoadMethod.ACLonly)
-            launchArguments.Add("--without-dalamud");
+            launchArguments.Add(DalamudInjectorArgs.WITHOUT_DALAMUD);
 
         if (fakeLogin)
-            launchArguments.Add("--fake-arguments");
+            launchArguments.Add(DalamudInjectorArgs.FAKE_ARGUMENTS);
+
+        if (noPlugins)
+            launchArguments.Add(DalamudInjectorArgs.NO_PLUGIN);
+
+        if (noThirdPlugins)
+            launchArguments.Add(DalamudInjectorArgs.NO_THIRD_PARTY);
 
         launchArguments.Add("--");
         launchArguments.Add(gameArgs);
 
-        var dalamudProcess = compatibility.RunInPrefix(string.Join(" ", launchArguments), environment: environment, redirectOutput: true);
+        var dalamudProcess = compatibility.RunInPrefix(string.Join(" ", launchArguments), environment: environment, redirectOutput: true, writeLog: true);
         var output = dalamudProcess.StandardOutput.ReadLine();
 
         if (output == null)
             throw new DalamudRunnerException("An internal Dalamud error has occured");
+
+        Console.WriteLine(output);
+
+        new Thread(() =>
+        {
+            while (!dalamudProcess.StandardOutput.EndOfStream)
+            {
+                var output = dalamudProcess.StandardOutput.ReadLine();
+                if (output != null)
+                    Console.WriteLine(output);
+            }
+
+        }).Start();
 
         try
         {

@@ -1,18 +1,30 @@
 {
+  "Refresh": {
+    "message": "重新整理(_R)",
+    "description": "AppUtil.TryYellOnGameFilesBeingOpen"
+  },
+  "Ignore": {
+    "message": "忽略(_I)",
+    "description": "AppUtil.TryYellOnGameFilesBeingOpen"
+  },
+  "UninstallQuestion": {
+    "message": "很遺憾看到您離開！\n您要刪除所有已保存的設置、外掛程式和密碼嗎？",
+    "description": "<>c__DisplayClass20_1.<Run>b__2"
+  },
   "updatefailureerror": {
     "message": "XIVLauncher 無法檢查更新。這可能是因為與 GitHub 的連接問題造成的。請等待幾分鐘後重試。\n如果您正在使用 VPN，請禁用後重試。你可能需要將 XIVLauncher 從你的防毒軟件中排除。\n如果此問題在數分鐘後仍未解決，請查閱常見問題。",
-    "description": "<Run>d__3.MoveNext"
+    "description": "<Run>d__20.MoveNext"
   },
   "RunOfficialLauncherNotPresentError": {
-    "message": "您還未設置 FFXIV 遊戲安裝路徑。 XIVLauncher 無法啟動官方啟動器。",
+    "message": "您沒有設置遊戲安裝。 XIVLauncher 無法啟動官方啟動器。",
     "description": "CustomMessageBox.OfficialLauncherButton_Click"
   },
   "RunOfficialLauncherConfirmSteam": {
-    "message": "您的遊戲帳戶是否連結到 Steam 帳戶？如果是，您必須安裝 Steam 才能繼續。",
+    "message": "您的遊戲帳戶是否連結到 Steam 帳戶？如果是的話，您必須安裝 Steam 才能繼續。",
     "description": "CustomMessageBox.OfficialLauncherButton_Click"
   },
   "RunOfficialLauncherSteamError": {
-    "message": "無法載入 Steam。請使用 Steam 啟動 FFXIV。",
+    "message": "無法載入 Steam。請使用 Steam 啟動遊戲。",
     "description": "CustomMessageBox.OfficialLauncherButton_Click"
   },
   "ErrorAssertionFailed": {
@@ -32,7 +44,7 @@
     "description": "Builder.NewFrom"
   },
   "UnexpectedErrorSummary": {
-    "message": "發生了未知錯誤。 ({0})",
+    "message": "發生了未預期的錯誤。 ({0})",
     "description": "Builder.NewFromUnexpectedException"
   },
   "UnexpectedErrorActionable": {
@@ -51,6 +63,10 @@
     "message": "正在更新運行時...",
     "description": "<>c__DisplayClass2_0.<SetStep>b__0"
   },
+  "DalamudNowStarting": {
+    "message": "正在啟動...",
+    "description": "<>c__DisplayClass2_0.<SetStep>b__0"
+  },
   "DalamudUnavailable": {
     "message": "由於遊戲更新，暫時無法使用外掛程式。",
     "description": "<>c__DisplayClass2_0.<SetStep>b__0"
@@ -64,11 +80,11 @@
     "description": "FirstTimeSetup.NextButton_Click"
   },
   "GamePathInvalidConfirm": {
-    "message": "The folder you selected has no FFXIV installation.\nXIVLauncher will install FFXIV the first time you log in.\nContinue?",
+    "message": "無法在此資料夾中找到遊戲。\nXIVLauncher 將在您下次登入時自動為您安裝遊戲。\n要繼續嗎？",
     "description": "FirstTimeSetup.NextButton_Click"
   },
   "GamePathRegionConfirm": {
-    "message": "The folder you selected might be the Chinese or Korean release of the game. XIVLauncher only supports international release of the game.\nIs the folder you've selected indeed for the international version?",
+    "message": "您選擇的資料夾可能是國服或韓服客戶端，而 XIVLauncher 僅支援國際服客戶端。\n您確定這是國際服客戶端嗎？",
     "description": "FirstTimeSetup.NextButton_Click"
   },
   "NewsLoading": {
@@ -77,11 +93,11 @@
   },
   "NewsDlFailed": {
     "message": "無法獲取公告信息",
-    "description": "MainWindow.<SetupHeadlines>b__10_3"
+    "description": "MainWindow.<SetupHeadlines>b__13_3"
   },
   "MaintenanceQueueBootPatch": {
-    "message": "檢測到啟動器更新。\n這通常代表遊戲也有更新。\n\n即將為您啟動遊戲。",
-    "description": "<OnMaintenanceQueueTimerEvent>d__19.MoveNext"
+    "message": "檢測到官方啟動器有更新。\n這通常代表遊戲也有更新。\n\n即將為您登入遊戲。",
+    "description": "<OnMaintenanceQueueTimerEvent>d__22.MoveNext"
   },
   "SettingsGamePatchPathError": {
     "message": "遊戲和更新包的下載路徑不能相同。\n請選擇不同的遊戲和更新包下載路徑。",
@@ -103,33 +119,25 @@
     "message": "無法從伺服器獲取當前 Dalamud 兼容的遊戲版本。這可能是因為您的 .NET 框架版本過舊。\n您可以在 Discord 上取得更多有關信息。",
     "description": "SettingsControl.EnableHooksCheckBox_OnChecked"
   },
-  "PluginPathNotFound": {
-    "message": "無法找到外掛程式資料夾。",
-    "description": "SettingsControl.TogglePlugin_OnClick"
-  },
-  "GameIsOpenPluginLocked": {
-    "message": "遊戲正在執行中，請先關閉遊戲後再試。",
-    "description": "SettingsControl.DeletePlugin_OnClick"
-  },
-  "DisabledPlugin": {
-    "message": " （已禁用）",
-    "description": "SettingsControl.ReloadPluginList"
+  "SteamFtToggleAutoStartWarning": {
+    "message": "要套用此設置，XIVLauncher 需要重新啟動。\n請重啟 XIVLauncher。",
+    "description": "SettingsControl.IsFreeTrialCheckbox_OnClick"
   },
   "IntegrityCheckImpossible": {
     "message": "此遊戲版本尚無參考報告。我們無法為您執行完整性檢查，請稍後再試。",
-    "description": "<>c__DisplayClass18_1.<RunIntegrityCheck_OnClick>b__4"
+    "description": "<>c__DisplayClass20_1.<RunIntegrityCheck_OnClick>b__4"
   },
   "IntegrityCheckNetworkError": {
-    "message": "Failed to download reference files for checking integrity. Check your internet connection and try again.",
-    "description": "<>c__DisplayClass18_1.<RunIntegrityCheck_OnClick>b__4"
+    "message": "無法下載完整性檢查檔案。請檢查網路狀態再試一次。",
+    "description": "<>c__DisplayClass20_1.<RunIntegrityCheck_OnClick>b__4"
   },
   "IntegrityCheckFailed": {
-    "message": "一些遊戲檔案似乎被修改或損壞。 \n\n如果您使用了 TextTools 模組，這是預期的結果。\n\n如果您沒有使用模組，請右鍵單擊 XIVLauncher 開始頁面上的「登錄」按鈕並選擇「修復遊戲」。",
-    "description": "<>c__DisplayClass18_1.<RunIntegrityCheck_OnClick>b__4"
+    "message": "一些遊戲檔案似乎被修改或已損壞。 \n\n如果您使用了 TextTools 模組，這是預期的結果。\n\n如果您沒有使用模組，請右鍵點擊 XIVLauncher 開始頁面上的「登錄」按鈕並選擇「修復遊戲」。",
+    "description": "<>c__DisplayClass20_1.<RunIntegrityCheck_OnClick>b__4"
   },
   "IntegrityCheckValid": {
     "message": "您的遊戲安裝完整。",
-    "description": "<>c__DisplayClass18_1.<RunIntegrityCheck_OnClick>b__4"
+    "description": "<>c__DisplayClass20_1.<RunIntegrityCheck_OnClick>b__4"
   },
   "AccountSwitcherSetProfilePic": {
     "message": "更改頭像",
@@ -146,6 +154,34 @@
   "AccountSwitcherDontSavePassword": {
     "message": "不保存密碼",
     "description": "AccountSwitcherViewModel.SetupLoc"
+  },
+  "AdvancedSettings": {
+    "message": "XIVLauncher 進階設置",
+    "description": "AdvancedSettingsViewModel..ctor"
+  },
+  "OK": {
+    "message": "確定",
+    "description": "AdvancedSettingsViewModel..ctor"
+  },
+  "EnabledUidCache": {
+    "message": "啟用試驗性 UID 快取（這將在遊戲更新後失效！）",
+    "description": "AdvancedSettingsViewModel..ctor"
+  },
+  "ResetUidCacheTip": {
+    "message": "在啟動啟動器時長按 Ctrl 鍵可以重置 UID 快取",
+    "description": "AdvancedSettingsViewModel..ctor"
+  },
+  "ExitLauncherAfterGameExitLoc": {
+    "message": "遊戲退出後關閉 XIVLauncher",
+    "description": "AdvancedSettingsViewModel..ctor"
+  },
+  "TreatNonZeroExitCodeAsFailureLoc": {
+    "message": "將非零的遊戲退出代碼視為失敗",
+    "description": "AdvancedSettingsViewModel..ctor"
+  },
+  "ForceNorthAmerica": {
+    "message": "始終下載北美的新聞、標題和橫幅。",
+    "description": "AdvancedSettingsViewModel..ctor"
   },
   "UpdateNotice": {
     "message": "XIVLauncher 已更新至 {0} 版本。",
@@ -173,10 +209,6 @@
   },
   "ChangelogThanks": {
     "message": "XIVLauncher 是由無數來自世界各地的人共同創造出的、免費且開源的軟體。\n非常感謝您在我們成長之路上的陪伴。",
-    "description": "ChangeLogWindowViewModel.SetupLoc"
-  },
-  "OK": {
-    "message": "確定",
     "description": "ChangeLogWindowViewModel.SetupLoc"
   },
   "ChatChannelSetupTitle": {
@@ -228,11 +260,11 @@
     "description": "DalamudLoadingOverlayViewModel.SetupLoc"
   },
   "ChooseGamePathFTS": {
-    "message": "請選擇遊戲所在資料夾。\n該資料夾應該包含「game」和「boot」資料夾。",
+    "message": "請選擇遊戲資料夾。\n它應該包含「game」和「boot」資料夾。\n\n如果您還沒有安裝遊戲，您可以選擇一個空資料夾，XIVLauncher 將為您安裝。",
     "description": "FirstTimeSetupViewModel.SetupLoc"
   },
   "FirstTimeSteamNotice": {
-    "message": "如果您常用 Steam 啟動遊戲，請選中此項。",
+    "message": "如果您希望使用 Steam 啟動遊戲，請選中此項。",
     "description": "FirstTimeSetupViewModel.SetupLoc"
   },
   "FirstTimeSteamCheckBox": {
@@ -272,7 +304,7 @@
     "description": "FirstTimeSetupViewModel.SetupLoc"
   },
   "NowDownloadingMeta": {
-    "message": "Downloading meta files...",
+    "message": "正在下載 meta 檔案...",
     "description": "GameRepairProgressWindowViewModel.SetupLoc"
   },
   "NowVerifying": {
@@ -296,7 +328,7 @@
     "description": "GameRepairProgressWindowViewModel.SetupLoc"
   },
   "SpeedUnitPerSecLoc": {
-    "message": "{0} 秒",
+    "message": "{0}/秒",
     "description": "GameRepairProgressWindowViewModel.SetupLoc"
   },
   "EstimatedRemainingDuration": {
@@ -335,14 +367,6 @@
     "message": "正在檢查遊戲完整性...",
     "description": "IntegrityCheckProgressWindowViewModel.SetupLoc"
   },
-  "LoginWebExceptionContent": {
-    "message": "XIVLauncher 無法建立與遊戲服務器的連接。\n\n這可能是暫時的問題，也可能是您的互聯網連接出現問題。請稍後再試。",
-    "description": "MainWindowViewModel.ShowInternetError"
-  },
-  "LoginNoOauthTitle": {
-    "message": "登入問題",
-    "description": "MainWindowViewModel.ShowInternetError"
-  },
   "PatchManDlFailure": {
     "message": "XIVLauncher 無法驗證已下載的遊戲檔案。請重新啟動並再試一次。\n\n這通常代表您的互聯網連接發生問題。\n如果此錯誤仍然存在，請嘗試使用日本 VPN。\n\n相關資訊： {0}\n{1}",
     "description": "MainWindowViewModel.PatcherOnFail"
@@ -352,7 +376,7 @@
     "description": "MainWindowViewModel.InstallerOnFail"
   },
   "LoginBoxUsername": {
-    "message": "Square Enix ID",
+    "message": "用户名稱",
     "description": "MainWindowViewModel.SetupLoc"
   },
   "LoginBoxPassword": {
@@ -384,7 +408,15 @@
     "description": "MainWindowViewModel.SetupLoc"
   },
   "LoginBoxNoDalamudLogin": {
-    "message": "不使用 Dalamud 啟動",
+    "message": "啟動時停用 Dalamud",
+    "description": "MainWindowViewModel.SetupLoc"
+  },
+  "LoginBoxNoPluginLogin": {
+    "message": "啟動時停用所有外掛程式",
+    "description": "MainWindowViewModel.SetupLoc"
+  },
+  "LoginBoxNoThirdLogin": {
+    "message": "啟動時停用第三方外掛程式",
     "description": "MainWindowViewModel.SetupLoc"
   },
   "LoginBoxLoginTooltip": {
@@ -423,6 +455,22 @@
     "message": "此驗證碼已被使用。\n新的驗證碼可能需要30秒。",
     "description": "MainWindowViewModel.<Login>b__21_0"
   },
+  "GameRepairProcessExitRequired1": {
+    "message": "關閉下列應用程式來修復遊戲。",
+    "description": "<>c.<RepairGame>b__25_1"
+  },
+  "GameRepairProcessExitRequiredPlural": {
+    "message": "關閉下列應用程式來修復遊戲。",
+    "description": "<>c.<RepairGame>b__25_1"
+  },
+  "GameUpdateExitRequired1": {
+    "message": "關閉下列應用程式來更新遊戲。",
+    "description": "<>c.<TryHandlePatchAsync>b__34_2"
+  },
+  "GameUpdateExitRequiredPlural": {
+    "message": "關閉下列應用程式來更新遊戲。",
+    "description": "<>c.<TryHandlePatchAsync>b__34_2"
+  },
   "AutoLoginIntro": {
     "message": "您正在啟用自動登入功能。\nXIVLauncher 此後將使用當前賬戶登入，並不再顯示主窗口。\n\n如果您需要更改設置或賬戶，請在登入時按住 SHIFT 鍵。",
     "description": "<>c__DisplayClass19_0.<GetLoginFunc>b__0"
@@ -436,27 +484,31 @@
     "description": "<>c__DisplayClass19_0.<GetLoginFunc>b__0"
   },
   "GateUnreachable": {
-    "message": "The login servers could not be reached. This usually indicates that the game is under maintenance, or that your connection to the login servers is unstable.\n\nPlease try again later.",
-    "description": "<CheckGateStatus>d__23.MoveNext"
+    "message": "無法連接至登錄伺服器。這通常代表遊戲正在進行維護，或你與登錄伺服器的連接不穩定。\n\n請稍後重試。",
+    "description": "<CheckGateStatus>d__22.MoveNext"
   },
   "GateClosed": {
-    "message": "FFXIV is currently under maintenance. Please try again later or see official sources for more information.",
-    "description": "<CheckGateStatus>d__23.MoveNext"
+    "message": "遊戲正在進行維護。請稍後再試或查看官方網站以取得更多資訊。",
+    "description": "<CheckGateStatus>d__22.MoveNext"
   },
   "CheckBootVersionError": {
     "message": "XIVLauncher 無法獲取可用的啟動器版本。這可能是因為遊戲伺服器正在進行維護，或者您與版本伺服器的連接不可用。如果您能夠使用官方啟動器登錄，請向我們報告此問題。",
-    "description": "<HandleBootCheck>d__34.MoveNext"
+    "description": "<HandleBootCheck>d__33.MoveNext"
   },
   "BootPatchFailure": {
-    "message": "Could not patch boot.",
-    "description": "<HandleBootCheck>d__34.MoveNext"
+    "message": "無法更新啟動器",
+    "description": "<HandleBootCheck>d__33.MoveNext"
+  },
+  "KillswitchText": {
+    "message": "XIVLauncher 目前無法啟動遊戲，因為登錄程序在最近的更新中被修改了。\n我們需要根據這些變化進行調整，並驗證我們的調整是否安全，然後才能重新啟用啟動器。請稍後再試。\n\n我們對這些情況表示歉意。\n\n你可以使用下面的「官方啟動器」按鈕來啟動官方啟動器。\n",
+    "description": "<Login>d__21.MoveNext"
   },
   "EmptyUsernameError": {
     "message": "請輸入您的賬號。",
     "description": "<Login>d__21.MoveNext"
   },
   "EmailUsernameError": {
-    "message": "請輸入您的 SE 賬戶名稱，而不是您的電子信箱地址。",
+    "message": "請輸入您的 SE 帳戶名稱，而不是您的電郵地址。",
     "description": "<Login>d__21.MoveNext"
   },
   "EmptyPasswordError": {
@@ -464,212 +516,232 @@
     "description": "<Login>d__21.MoveNext"
   },
   "UidCacheInstallError": {
-    "message": "您在更新設置中啟用了 UID 緩存功能。\n這導致我們無法為您重新安裝遊戲。\n\n您需要先禁用 UID 緩存功能才能重新安裝 FFXIV。",
+    "message": "您在更新設置中啟用了 UID 緩存。\n這導致我們無法為您重新安裝遊戲。\n\n如果您希望重新安装游戏，请先停用 UID 緩存。",
     "description": "<Login>d__21.MoveNext"
   },
   "GameRepairSuccess0": {
     "message": "所有遊戲檔案似乎都是有效的。",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "GameRepairSuccess1": {
     "message": "XIVLauncher 已成功修復 1 個遊戲檔案。",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "GameRepairSuccessPlural": {
     "message": "XIVLauncher 已成功修復 {0} 個遊戲檔案。",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
+  },
+  "GameRepairSuccessMoved1": {
+    "message": "此外，原始遊戲安裝中未包含的1個檔案已移至 {0}。\n如果您正在使用 ReShade，您必須重新安裝它。",
+    "description": "<RepairGame>d__25.MoveNext"
+  },
+  "GameRepairSuccessMovedPlural": {
+    "message": "此外，原始遊戲安裝中未包含的{0}個檔案已移至 {1}。\n如果您正在使用 ReShade，您必須重新安裝它。",
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "GameRepairSuccess_LaunchGame": {
     "message": "啟動游戲 (_L)",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "GameRepairSuccess_VerifyAgain": {
     "message": "再次驗證 (_V)",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "GameRepairSuccess_Close": {
     "message": "關閉 (_C)",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "NoVersionReferenceError": {
     "message": "您正在使用的遊戲版本因參考信息不足而無法被 XIVLauncher 修復。\n請稍後再試。",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "GameRepairSuccess_TryAgain": {
     "message": "重試 (_T)",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "GameRepairError": {
     "message": "修復遊戲檔案時出現錯誤。\n您可能需要重新安裝遊戲。",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "PatcherAlreadyInProgress": {
     "message": "XIVLauncher 正在另一個進程中為您更新遊戲。請檢查您是否啟動了兩個 XIVLauncher。",
-    "description": "<RepairGame>d__26.MoveNext"
+    "description": "<RepairGame>d__25.MoveNext"
   },
   "DalamudVc2019RedistError": {
     "message": "XIVLauncher 遊戲內組件需要安裝 Microsoft Visual C++ 2015-2019 Redistributable 才能啟用。請在微軟官網下載並安裝。",
-    "description": "<StartGameAndAddon>d__30.MoveNext"
+    "description": "<StartGameAndAddon>d__29.MoveNext"
   },
   "DalamudArchError": {
     "message": "Dalamud 無法在你的電腦架構上運行。請確保您正在使用 64 位元的 Windows。\n如果您在 ARM 架構上使用 Windows ，請確保 XIVLauncher 啟用了 x64 模擬器。",
-    "description": "<StartGameAndAddon>d__30.MoveNext"
-  },
-  "DalamudRunnerError": {
-    "message": "無法成功啟動 Dalamud。這可能是由您的防毒軟體引起的。\n為防止這種情況，請將文件夾「%AppData%\\XIVLauncher\\addons」添加到防毒軟體的白名單。",
-    "description": "<StartGameAndAddon>d__30.MoveNext"
+    "description": "<StartGameAndAddon>d__29.MoveNext"
   },
   "DalamudEnsurementError": {
-    "message": "Could not download necessary data files to use Dalamud and plugins.\nThis is likely a problem with your internet connection - the game will start, but you will not be able to use plugins.",
-    "description": "<StartGameAndAddon>d__30.MoveNext"
+    "message": "無法下載使用 Dalamud 和外掛程式所需的資料檔案。\n這可能是您的網路連線問題，或是防毒軟體封鎖了必要檔案而造成的。\n遊戲將照常啟動，但您將無法使用外掛程式。\n\n請檢查我們的常見問題以獲取更多資訊。",
+    "description": "<StartGameAndAddon>d__29.MoveNext"
   },
   "AddonLoadError": {
     "message": "這可能是由您的防毒軟體引起的，請檢查其日誌並添加需要的排除項。",
-    "description": "<StartGameAndAddon>d__30.MoveNext"
+    "description": "<StartGameAndAddon>d__29.MoveNext"
   },
   "GameIsOpenError": {
     "message": "遊戲或官方啟動器正在執行中，XIVLauncher 無法為您更新遊戲。\n請關閉遊戲或官方啟動器後再試一次。",
-    "description": "<TryHandlePatchAsync>d__35.MoveNext"
+    "description": "<TryHandlePatchAsync>d__34.MoveNext"
   },
   "PatchManNoInstaller": {
     "message": "更新程序無法正常執行。\n{0}\n\n如果您剛剛拒絕了權限請求，請重試并授權。\n如果此問題仍然存在，請在 Discord 上聯繫我們。",
-    "description": "<TryHandlePatchAsync>d__35.MoveNext"
+    "description": "<TryHandlePatchAsync>d__34.MoveNext"
   },
   "FreeSpaceError": {
     "message": "您的硬碟空間不足，無法下載更新。\n\n您可以在設置中更改更新下載資料夾。\n\n需要：{0}\n可用：{1}",
-    "description": "<TryHandlePatchAsync>d__35.MoveNext"
+    "description": "<TryHandlePatchAsync>d__34.MoveNext"
   },
   "FreeSpaceErrorAll": {
     "message": "您的硬碟空間不足，無法下載所有更新。\n\n您可以在 XIVLauncher 的設置中更改更新下載資料夾。\n\n需要：{0}\n可用：{1}",
-    "description": "<TryHandlePatchAsync>d__35.MoveNext"
+    "description": "<TryHandlePatchAsync>d__34.MoveNext"
   },
   "FreeSpaceGameError": {
     "message": "您的硬碟空間不足，無法安裝更新。\n\n您可以在設置中更改遊戲安裝資料夾。\n\n需要：{0}\n可用：{1}",
-    "description": "<TryHandlePatchAsync>d__35.MoveNext"
+    "description": "<TryHandlePatchAsync>d__34.MoveNext"
+  },
+  "LoginNoOauthTitle": {
+    "message": "登入問題",
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginIoErrorSummary": {
     "message": "無法找到遊戲資料檔案。",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginIoErrorActionable": {
     "message": "這可能表示 XIVLauncher 中設置的遊戲路徑不是預設的，例如在斷開連接的硬盤或網絡儲存。請在 XIVLauncher 設置中檢查遊戲路徑。",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginInvalidVersionFiles": {
-    "message": "Version information could not be read from your game files.\n\nYou need to reinstall or repair the game.",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "message": "無法從您的遊戲文件中讀取版本資訊。\n\n您需要重新安裝或修復遊戲檔案。 右鍵點擊 XIVLauncher 中的登錄按鈕，然後選擇「修復遊戲」。",
+    "description": "<TryLoginToGame>d__23.MoveNext"
+  },
+  "LoginSteamNullTicket": {
+    "message": "Steam 未對您進行身份驗證。這可能是 Steam 的暫時性問題，您可能需要在幾分鐘後重試。\n\n如果問題持續，請確保 Steam 正在運行，並且使用與你 SE ID 綁定的 Steam 賬戶登錄。\n\n如果您正在使用免費試用版，請在 XIVLauncher 設置的「遊戲設置」選項卡中勾選「使用免費試用帳戶」。\n相關資訊：",
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginSteamIssue": {
-    "message": "無法通過 Steam 進行驗證。 請確保 Steam 正在運行，並且使用與你 SE ID 綁定的 Steam 賬戶登錄。\n如果您正在使用 FFXIVLauncher 免費試用版，請在 XIVLauncher 設置的「關於」選項卡中勾選「免費試用模式」。\n\n相關資訊：{0}",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "message": "無法通過 Steam 進行驗證。 請確保 Steam 正在運行，並且使用與你 SE ID 綁定的 Steam 賬戶登錄。\n如果您正在使用免費試用版，請在 XIVLauncher 設置的「遊戲設置」選項卡中勾選「使用免費試用帳戶」。\n\n相關資訊：{0}",
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginSteamWrongAccount": {
-    "message": "The account you are logging in to is NOT the one that is linked to the Steam account on your PC. You can only log in with the account tied to your SE ID while using this Steam account.\n\nPlease log into matching accounts.",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "message": "您所登入的帳戶與電腦上已連結 Steam 的帳戶不一致。使用此 Steam 帳戶時，您只能使用與您的 SE ID 綁定的帳戶登入。\n\n請登入到相應的帳戶。連結到 Steam 的帳戶是“{0}” - 請確保沒有拼寫錯誤。",
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginSteamLinkNeeded": {
     "message": "在使用此帳戶開始游戲前，你需要使用官方啟動器將其連結到您的 Steam 帳戶。\n請連結您的帳戶，然後再試一次。您可以通過點擊「官方啟動器」按鈕來執行此操作。",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginGenericError": {
-    "message": "無法登錄您的 SE 帳戶。\n請檢查您的用戶名和密碼。",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "message": "無法登錄您的 SE 帳戶。\n請檢查您的用戶名稱和密碼。",
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginGenericErrorCheckOtpUse": {
     "message": "如果您正在使用一次性密碼 (OTP)，請在\"{0}\"覆選框上打勾，然後再試一次。",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginGenericErrorCheckOtp": {
     "message": "請仔細檢查您的 OTP 設備的時鐘是否正確。\n如果您最近已登錄，請嘗試在 30 秒後再次登錄。",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "description": "<TryLoginToGame>d__23.MoveNext"
+  },
+  "LoginWebExceptionContent": {
+    "message": "XIVLauncher 無法建立與遊戲服務器的連接。\n\n這可能是暫時的問題，也可能是您的互聯網連接出現問題。請稍後再試。",
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginGenericServerIssue": {
     "message": "服務器發送了無效的響應。這通常會發生在服務中斷服務器負載過高或的時候。\n請在一分鐘後再試，或者嘗試使用官方啟動器。\n\n您可以從 Lodestone 瞭解到更多有關服務中斷的信息。",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "CheckLoginInfoNotAdditionally": {
     "message": "請檢查您的登錄信息是否正確無誤並再試一次。",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginNoOauthAutologinHint": {
     "message": "\n\n自動登入已被禁用。",
-    "description": "<TryLoginToGame>d__24.MoveNext"
+    "description": "<TryLoginToGame>d__23.MoveNext"
   },
   "LoginNoServiceMessage": {
-    "message": "This Square Enix account cannot play FINAL FANTASY XIV. Please make sure that you have an active subscription and that it is paid up.\n\nIf you bought FINAL FANTASY XIV on Steam, make sure to check the \"Use Steam service account\" checkbox while logging in.\nIf Auto-Login is enabled, hold shift while starting to access settings.",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "message": "該 Square Enix 賬戶無法遊玩遊戲。請確保您有一個有效的訂閱，並且已付款。\n\n如果您的遊戲在 Steam 上購買，請確保您在登入時勾選了「使用 Steam 賬戶」。\n如果您啟用了自動登入，請在啟動時按住 Shift 鍵以訪問設置。",
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "LoginAcceptTermsMessage": {
-    "message": "請先在官方啟動器中接受 FINAL FANTASY XIV 的使用條款。",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "message": "請在官方啟動器中接受使用條款。",
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "EverythingIsFuckedMessage": {
     "message": "部分遊戲檔案已損毀或被篡改，無法進行更新或啟動。\n請重新安裝遊戲以修復此問題。\n\n如果該錯誤仍然持續，請通過 Discord 聯繫我們。",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "LoginRepairResponseIsNotNeedsPatchGame": {
-    "message": "The server sent an incorrect response - the repair cannot proceed.",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "message": "伺服器返回了錯誤的回應，無法繼續進行修復。",
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "PatchInstallDisclaimer": {
     "message": "發現了新的遊戲更新，您必須進行更新才能繼續遊玩。\n您希望 XIVLauncher 為您安裝更新嗎？",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "LoginNoStartOk": {
     "message": "執行了更新檢查，並安裝了所有可用更新。",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "LaunchGameNonZeroExitCode": {
     "message": "看起來遊戲因致命錯誤而退出。你要重新啟動遊戲嗎？\n\n退出代碼：0x{0:X8}",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "LaunchGameRelaunch": {
     "message": "重啟 (_R)",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "LaunchGameClose": {
     "message": "關閉 (_C)",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "LaunchGameDoNotAskAgain": {
     "message": "不再詢問 (_D)",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "LaunchGameRetry": {
     "message": "重試 (_T)",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "MultiboxDeniedWarningSummary": {
     "message": "默認情況下，您不能啟動兩個以上的遊戲實例。",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "MultiboxDeniedWarningActionable": {
     "message": "請檢查是否存在未正確關閉的遊戲實例。 (檢測到：{0})",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "LaunchGameKillThenRetry": {
     "message": "終止後再試一次 (_K)",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "GameExitedPrematurelyErrorSummary": {
-    "message": "XIVLauncher 無法檢測到遊戲正確啟動。",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "message": "XIVLauncher 無法正確地啟動遊戲。",
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "GameExitedPrematurelyErrorActionable": {
-    "message": "這可能是暫時的問題。請嘗試重啟您的電腦。這有可能是你的遊戲安裝無效。",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "message": "這可能是暫時的問題。請嘗試重啟您的電腦。\n您的遊戲安裝可能無效 - 您可以通過右鍵點選登錄按鈕來修復您的遊戲安裝，並選擇「修復遊戲」。",
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
+  },
+  "GameExitedPrematurelyErrorAV": {
+    "message": "\nThis issue could also be caused by your Antivirus program mistakenly marking XIVLauncher as malicious. You may have to add exclusions to its settings - please check our FAQ for more information.",
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "BinaryNotPresentErrorSummary": {
     "message": "找不到遊戲的啟動檔案。",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "BinaryNotPresentErrorActionable": {
     "message": "這可能是由您的防毒軟體引起的。您可能需要重新安裝遊戲。",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "MultipleErrors": {
     "message": "發生了多個錯誤。",
-    "description": "<TryProcessLoginResult>d__25.MoveNext"
+    "description": "<TryProcessLoginResult>d__24.MoveNext"
   },
   "OtpInputPrompt": {
     "message": "請輸入您的一次性密碼（OTP）。",
@@ -681,6 +753,10 @@
   },
   "OtpInputPromptBad": {
     "message": "請輸入一個有效的一次性密碼 (OTP)。\n長度為6位數字。",
+    "description": "OtpInputDialogViewModel.SetupLoc"
+  },
+  "PasteButton": {
+    "message": "點擊此處從剪貼板貼上。",
     "description": "OtpInputDialogViewModel.SetupLoc"
   },
   "PatchPreparing": {
@@ -748,11 +824,23 @@
     "description": "SettingsControlViewModel.SetupLoc"
   },
   "GamePathSafeguardRegionWarning": {
-    "message": "XIVLauncher does not support Chinese or Korean version of the game. Make sure this path indeed is for the international version.",
+    "message": "XIVLauncher 不支援國服或韓服客戶端。請確保該路徑屬於國際服版本。",
     "description": "SettingsControlViewModel.SetupLoc"
   },
   "OtpServerCheckBox": {
     "message": "啟用 XL Authenticator APP/OTP 巨集支持",
+    "description": "SettingsControlViewModel.SetupLoc"
+  },
+  "OtpServerTooltip": {
+    "message": "此選項可以讓你直接從手機將一次性密碼 (OTP) 發送到 XIVLauncher。\n點擊「了解更多」以查看如何進行設置。",
+    "description": "SettingsControlViewModel.SetupLoc"
+  },
+  "LearnMore": {
+    "message": "了解更多",
+    "description": "SettingsControlViewModel.SetupLoc"
+  },
+  "OtpLearnMoreTooltipLoc": {
+    "message": "在瀏覽器中打開指南。",
     "description": "SettingsControlViewModel.SetupLoc"
   },
   "AdditionalArguments": {
@@ -781,6 +869,14 @@
   },
   "RunIntegrityCheckTooltip": {
     "message": "對遊戲檔案執行完整性檢查。",
+    "description": "SettingsControlViewModel.SetupLoc"
+  },
+  "AutoStartSteam": {
+    "message": "啟動 XIVLauncher 時啟動 Steam",
+    "description": "SettingsControlViewModel.SetupLoc"
+  },
+  "AutoStartSteamTooltip": {
+    "message": "當您啟動 XIVLauncher 時，將會自動檢測 Steam 運行狀態並確保其正在運行。\n你將在 Steam 上自動顯示為 「遊玩中」。",
     "description": "SettingsControlViewModel.SetupLoc"
   },
   "SettingsGameSettings": {
@@ -956,7 +1052,7 @@
     "description": "SettingsControlViewModel.SetupLoc"
   },
   "Credits": {
-    "message": "作者：goat\n特別鳴謝：Mino、sky、LeonBlade、Wintermute、Zyian、Roy、Meli、\nAida Enna、Aireil、kizer 及 the angry paissa artist。\n\n如果您有任何疑問或建議，請加入 Discord 伺服器或在 GitHub 上建立一個「Issue」。",
+    "message": "作者：goat\n特別鳴謝：Mino、sky、LeonBlade、Wintermute、Zyian、Roy、Meli、\nAida Enna、Aireil、kizer 以及 the angry paissa artist。\n\n如果您有任何疑問或建議，請加入 Discord 伺服器或在 GitHub 上建立一個「Issue」。",
     "description": "SettingsControlViewModel.SetupLoc"
   },
   "License": {
@@ -971,28 +1067,20 @@
     "message": "啟動官方啟動器",
     "description": "SettingsControlViewModel.SetupLoc"
   },
-  "EnabledUidCache": {
-    "message": "啟用試驗性 UID 快取（這將在遊戲更新後失效！）",
-    "description": "SettingsControlViewModel.SetupLoc"
-  },
-  "ResetUidCacheTip": {
-    "message": "在啟動啟動器時長按 Ctrl 鍵可以重置 UID 快取",
-    "description": "SettingsControlViewModel.SetupLoc"
-  },
-  "EnableEncryption": {
-    "message": "啟用客戶端加密參數傳輸",
-    "description": "SettingsControlViewModel.SetupLoc"
-  },
-  "ExitLauncherAfterGameExitLoc": {
-    "message": "遊戲退出後關閉 XIVLauncher",
-    "description": "SettingsControlViewModel.SetupLoc"
-  },
-  "TreatNonZeroExitCodeAsFailureLoc": {
-    "message": "將非零的遊戲退出代碼視為失敗",
-    "description": "SettingsControlViewModel.SetupLoc"
-  },
   "IsFreeTrial": {
-    "message": "在免費試用模式下啟動",
+    "message": "使用免費試用帳戶",
+    "description": "SettingsControlViewModel.SetupLoc"
+  },
+  "OpenAdvancedSettings": {
+    "message": "開啟進階設置",
+    "description": "SettingsControlViewModel.SetupLoc"
+  },
+  "OpenAdvancedSettingsTip": {
+    "message": "這些設置僅適用於高級使用者。除非您清楚知道自己在做什麼，否則請不要修改。",
+    "description": "SettingsControlViewModel.SetupLoc"
+  },
+  "DisabledPlugin": {
+    "message": " （已禁用）",
     "description": "SettingsControlViewModel.SetupLoc"
   },
   "UpdateCheckMsg": {
@@ -1008,7 +1096,7 @@
     "description": "UpdateLoadingDialogViewModel.SetupLoc"
   },
   "AdminCheck": {
-    "message": "XIVLauncher 或 FFXIV 已被設置為使用系統管理員身份執行。\n這可能會引起各類問題，例如無法注入遊戲內組件或快捷鍵無回應等。\n\n是否自動修復此問題？",
+    "message": "XIVLauncher 或遊戲已被設置為使用系統管理員身份執行。\n這可能會引起各類問題，例如無法注入遊戲內組件或快捷鍵無回應等。\n\n是否自動修復此問題？",
     "description": "ProblemCheck.RunCheck"
   },
   "AdminCheckNag": {
@@ -1020,11 +1108,11 @@
     "description": "ProblemCheck.RunCheck"
   },
   "MyGamesWriteAccessNag": {
-    "message": "你沒有權限寫入 FFXIV 的 My Games 資料夾。\n這將導致屏幕截圖與角色數據無法保存。\n\n這可能是由您的防毒軟體或權限錯誤引起的。請檢查您的 My Games 資料夾權限。",
+    "message": "你沒有權限寫入遊戲的 My Games 資料夾。\n這將導致屏幕截圖與角色數據無法保存。\n\n這可能是由您的防毒軟體或權限錯誤引起的。請檢查您的 My Games 資料夾權限。",
     "description": "ProblemCheck.RunCheck"
   },
   "GShadeSymlinks": {
-    "message": "GShade symbolic links are corrupted.\n\nThe game cannot start. Do you want XIVLauncher to fix this? You will need to reinstall GShade.",
+    "message": "GShade 的符號連結已損壞。\n\n遊戲無法啟動。您需要 XIVLauncher 為您修復此問題嗎？您需要重新安裝 GShade 。",
     "description": "ProblemCheck.RunCheck"
   },
   "GShadeError": {
@@ -1032,7 +1120,7 @@
     "description": "ProblemCheck.RunCheck"
   },
   "GShadeWrongMode": {
-    "message": "You installed GShade in a mode that isn't optimal for use together with XIVLauncher. Do you want XIVLauncher to fix this for you?\n\nThis will not change your presets or settings, it will merely improve compatibility with XIVLauncher features.",
+    "message": "你的 GShade 安裝模式對 XIVLauncher 的相容性不佳。你希望 XIVLauncher 進行修復嗎？\n\n這並不會更改你的預設或設置，只會提高 GShade 和 XIVLauncher 的相容性。",
     "description": "ProblemCheck.RunCheck"
   }
 }

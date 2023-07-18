@@ -36,12 +36,17 @@ public class Launcher
     private readonly IUniqueIdCache uniqueIdCache;
     private readonly ISettings settings;
     private readonly HttpClient client;
+    private readonly string frontierUrlTemplate;
 
-    public Launcher(ISteam? steam, IUniqueIdCache uniqueIdCache, ISettings settings)
+    private const string FALLBACK_FRONTIER_URL_TEMPLATE = "https://launcher.finalfantasyxiv.com/v620/index.html?rc_lang={0}&time={1}";
+
+    public Launcher(ISteam? steam, IUniqueIdCache uniqueIdCache, ISettings settings, string? frontierUrl =  null)
     {
         this.steam = steam;
         this.uniqueIdCache = uniqueIdCache;
         this.settings = settings;
+        this.frontierUrlTemplate =
+            string.IsNullOrWhiteSpace(frontierUrl) ? FALLBACK_FRONTIER_URL_TEMPLATE : frontierUrl;
 
         ServicePointManager.Expect100Continue = false;
 
@@ -66,7 +71,8 @@ public class Launcher
         this.client = new HttpClient(handler);
     }
 
-    public Launcher(byte[] steamTicket, IUniqueIdCache uniqueIdCache, ISettings settings) : this(steam: null, uniqueIdCache, settings)
+    public Launcher(byte[] steamTicket, IUniqueIdCache uniqueIdCache, ISettings settings, string? frontierUrl = null)
+        : this(steam: null, uniqueIdCache, settings, frontierUrl)
     {
         this.steamTicket = steamTicket;
     }
@@ -150,19 +156,27 @@ public class Launcher
                     throw new SteamException("Not logged into Steam, or Steam is running in offline mode. Please log in and try again.");
                 }
 
-                try
+                const int NUM_TRIES = 5;
+
+                for (var i = 0; i < NUM_TRIES; i++)
                 {
-                    steamTicket = await Ticket.Get(steam).ConfigureAwait(true);
-                }
-                catch (Exception ex)
-                {
-                    throw new SteamException("Could not request auth ticket.", ex);
+                    try
+                    {
+                        steamTicket = await Ticket.Get(steam).ConfigureAwait(true);
+
+                        if (steamTicket != null)
+                            break;
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new SteamException($"Could not request auth ticket (try {i + 1}/{NUM_TRIES})", ex);
+                    }
                 }
             }
 
             if (steamTicket == null)
             {
-                throw new SteamException("Steam auth ticket was null.");
+                throw new SteamTicketNullException();
             }
         }
 
@@ -288,41 +302,58 @@ public class Launcher
     }
 
     /// <summary>
-    /// Check ver & bck files for sanity.
+    /// Check ver and bck files for sanity.
     /// </summary>
     /// <param name="gamePath"></param>
     /// <param name="exLevel"></param>
     private static void EnsureVersionSanity(DirectoryInfo gamePath, int exLevel)
     {
-        var failed = string.IsNullOrWhiteSpace(Repository.Ffxiv.GetVer(gamePath));
-        failed &= string.IsNullOrWhiteSpace(Repository.Ffxiv.GetVer(gamePath, true));
+        var failed = IsBadVersionSanity(gamePath, Repository.Ffxiv);
+        failed |= IsBadVersionSanity(gamePath, Repository.Ffxiv, true);
 
         if (exLevel >= 1)
         {
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex1.GetVer(gamePath));
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex1.GetVer(gamePath, true));
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex1);
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex1, true);
         }
 
         if (exLevel >= 2)
         {
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex2.GetVer(gamePath));
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex2.GetVer(gamePath, true));
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex2);
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex2, true);
         }
 
         if (exLevel >= 3)
         {
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex3.GetVer(gamePath));
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex3.GetVer(gamePath, true));
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex3);
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex3, true);
         }
 
         if (exLevel >= 4)
         {
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex4.GetVer(gamePath));
-            failed &= string.IsNullOrWhiteSpace(Repository.Ex4.GetVer(gamePath, true));
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex4);
+            failed |= IsBadVersionSanity(gamePath, Repository.Ex4, true);
         }
 
         if (failed)
             throw new InvalidVersionFilesException();
+    }
+
+    private static bool IsBadVersionSanity(DirectoryInfo gamePath, Repository repo, bool isBck = false)
+    {
+        var text = repo.GetVer(gamePath, isBck);
+
+        var nullOrWhitespace = string.IsNullOrWhiteSpace(text);
+        var containsNewline = text.Contains("\n");
+        var allNullBytes = Encoding.UTF8.GetBytes(text).All(x => x == 0x00);
+
+        if (nullOrWhitespace || containsNewline || allNullBytes)
+        {
+            Log.Error("Sanity check failed for {repo}/{isBck}: {NullOrWhitespace}, {ContainsNewline}, {AllNullBytes}", repo, isBck, nullOrWhitespace, containsNewline, allNullBytes);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -363,7 +394,15 @@ public class Launcher
 
         Log.Verbose("Boot patching is needed... List:\n{PatchList}", resp);
 
-        return PatchListParser.Parse(text);
+        try
+        {
+            return PatchListParser.Parse(text);
+        }
+        catch (PatchListParseException ex)
+        {
+            Log.Information("Patch list:\n{PatchList}", ex.List);
+            throw;
+        }
     }
 
     private async Task<(string Uid, LoginState result, PatchListEntry[] PendingGamePatches)> RegisterSession(OauthLoginResult loginResult, DirectoryInfo gamePath, bool forceBaseVersion)
@@ -374,7 +413,8 @@ public class Launcher
         request.Headers.AddWithoutValidation("X-Hash-Check", "enabled");
         request.Headers.AddWithoutValidation("User-Agent", Constants.PatcherUserAgent);
 
-        EnsureVersionSanity(gamePath, loginResult.MaxExpansion);
+        if (!forceBaseVersion)
+            EnsureVersionSanity(gamePath, loginResult.MaxExpansion);
         request.Content = new StringContent(GetVersionReport(gamePath, loginResult.MaxExpansion, forceBaseVersion));
 
         var resp = await this.client.SendAsync(request);
@@ -384,8 +424,11 @@ public class Launcher
         if (resp.StatusCode == HttpStatusCode.Conflict)
             return (null, LoginState.NeedsPatchBoot, null);
 
+        if (resp.StatusCode == HttpStatusCode.Gone)
+            throw new InvalidResponseException("The server indicated that the version requested is no longer being serviced or not present.", text);
+
         if (!resp.Headers.TryGetValues("X-Patch-Unique-Id", out var uidVals))
-            throw new InvalidResponseException("Could not get X-Patch-Unique-Id.", text);
+            throw new InvalidResponseException($"Could not get X-Patch-Unique-Id. ({resp.StatusCode})", text);
 
         var uid = uidVals.First();
 
@@ -637,12 +680,12 @@ public class Launcher
         return await resp.Content.ReadAsByteArrayAsync();
     }
 
-    private static string GenerateFrontierReferer(ClientLanguage language)
+    private string GenerateFrontierReferer(ClientLanguage language)
     {
         var langCode = language.GetLangCode().Replace("-", "_");
         var formattedTime = GetLauncherFormattedTimeLong();
 
-        return $"https://launcher.finalfantasyxiv.com/v610/index.html?rc_lang={langCode}&time={formattedTime}";
+        return string.Format(this.frontierUrlTemplate, langCode, formattedTime);
     }
 
     // Used to be used for frontier top, they now use the un-rounded long timestamp

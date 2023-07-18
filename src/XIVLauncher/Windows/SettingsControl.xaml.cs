@@ -29,6 +29,7 @@ namespace XIVLauncher.Windows
     public partial class SettingsControl
     {
         public event EventHandler SettingsDismissed;
+        public event EventHandler CloseMainWindowGracefully;
 
         private SettingsControlViewModel ViewModel => DataContext as SettingsControlViewModel;
 
@@ -67,14 +68,10 @@ namespace XIVLauncher.Windows
             LauncherLanguageComboBox.SelectedIndex = (int) App.Settings.LauncherLanguage.GetValueOrDefault(LauncherLanguage.English);
             LauncherLanguageNoticeTextBlock.Visibility = Visibility.Hidden;
             AddonListView.ItemsSource = App.Settings.AddonList ??= new List<AddonEntry>();
-            UidCacheCheckBox.IsChecked = App.Settings.UniqueIdCacheEnabled;
-            ExitLauncherAfterGameExitCheckbox.IsChecked = App.Settings.ExitLauncherAfterGameExit ?? true;
-            TreatNonZeroExitCodeAsFailureCheckbox.IsChecked = App.Settings.TreatNonZeroExitCodeAsFailure ?? false;
             AskBeforePatchingCheckBox.IsChecked = App.Settings.AskBeforePatchInstall;
             KeepPatchesCheckBox.IsChecked = App.Settings.KeepPatches;
             PatchAcquisitionComboBox.SelectedIndex = (int) App.Settings.PatchAcquisitionMethod.GetValueOrDefault(AcquisitionMethod.Aria);
-
-            ReloadPluginList();
+            AutoStartSteamCheckBox.IsChecked = App.Settings.AutoStartSteam;
 
             InjectionDelayUpDown.Value = App.Settings.DalamudInjectionDelayMs;
 
@@ -123,12 +120,10 @@ namespace XIVLauncher.Windows
             App.Settings.LauncherLanguage = (LauncherLanguage)LauncherLanguageComboBox.SelectedIndex;
 
             App.Settings.AddonList = (List<AddonEntry>)AddonListView.ItemsSource;
-            App.Settings.UniqueIdCacheEnabled = UidCacheCheckBox.IsChecked == true;
-            App.Settings.ExitLauncherAfterGameExit = ExitLauncherAfterGameExitCheckbox.IsChecked == true;
-            App.Settings.TreatNonZeroExitCodeAsFailure = TreatNonZeroExitCodeAsFailureCheckbox.IsChecked == true;
             App.Settings.AskBeforePatchInstall = AskBeforePatchingCheckBox.IsChecked == true;
             App.Settings.KeepPatches = KeepPatchesCheckBox.IsChecked == true;
             App.Settings.PatchAcquisitionMethod = (AcquisitionMethod) PatchAcquisitionComboBox.SelectedIndex;
+            App.Settings.AutoStartSteam = AutoStartSteamCheckBox.IsChecked == true;
 
             App.Settings.InGameAddonEnabled = EnableHooksCheckBox.IsChecked == true;
 
@@ -157,7 +152,7 @@ namespace XIVLauncher.Windows
 
         private void GitHubButton_OnClick(object sender, RoutedEventArgs e)
         {
-            Process.Start("https://github.com/goaaats/FFXIVQuickLauncher");
+            PlatformHelpers.OpenBrowser("https://github.com/goaaats/FFXIVQuickLauncher");
         }
 
         private void BackupToolButton_OnClick(object sender, RoutedEventArgs e)
@@ -246,11 +241,6 @@ namespace XIVLauncher.Windows
             }
         }
 
-        private void ResetCacheButton_OnClick(object sender, RoutedEventArgs e)
-        {
-            App.UniqueIdCache.Reset();
-        }
-
         private void RunIntegrityCheck_OnClick(object s, RoutedEventArgs e)
         {
             var window = new IntegrityCheckProgressWindow();
@@ -315,7 +305,7 @@ namespace XIVLauncher.Windows
 
         private void Dx9RadioButton_OnUnchecked(object sender, RoutedEventArgs e)
         {
-            Dx9DisclaimerTextBlock.Visibility = Visibility.Hidden;
+            Dx9DisclaimerTextBlock.Visibility = Visibility.Collapsed;
         }
 
         private void LauncherLanguageCombo_SelectionChanged(object sender, RoutedEventArgs e)
@@ -330,160 +320,19 @@ namespace XIVLauncher.Windows
         {
             try
             {
-                if (!string.IsNullOrEmpty(ViewModel.GamePath) && GameHelpers.IsValidFfxivPath(ViewModel.GamePath) && !DalamudLauncher.CanRunDalamud(new DirectoryInfo(ViewModel.GamePath)))
+                if (!string.IsNullOrEmpty(ViewModel.GamePath) && GameHelpers.IsValidGamePath(ViewModel.GamePath) && !DalamudLauncher.CanRunDalamud(new DirectoryInfo(ViewModel.GamePath)))
                 {
                     CustomMessageBox.Show(
-                        Loc.Localize("DalamudIncompatible", "Dalamud was not yet updated for your current FFXIV version.\nThis is common after patches, so please be patient or ask on the Discord for a status update!"),
+                        Loc.Localize("DalamudIncompatible", "Dalamud was not yet updated for your current game version.\nThis is common after patches, so please be patient or ask on the Discord for a status update!"),
                         "XIVLauncher", MessageBoxButton.OK, MessageBoxImage.Asterisk, parentWindow: Window.GetWindow(this));
                 }
             }
             catch (Exception exc)
             {
                 CustomMessageBox.Show(Loc.Localize("DalamudCompatCheckFailed",
-                    "Could not contact the server to get the current compatible FFXIV version Dalamud. This might mean that your .NET installation is too old.\nPlease check the Discord for more information."), "XIVLauncher Problem", MessageBoxButton.OK, MessageBoxImage.Hand, parentWindow: Window.GetWindow(this));
+                    "Could not contact the server to get the current compatible game version for Dalamud. This might mean that your .NET installation is too old.\nPlease check the Discord for more information."), "XIVLauncher Problem", MessageBoxButton.OK, MessageBoxImage.Hand, parentWindow: Window.GetWindow(this));
 
                 Log.Error(exc, "Couldn't check dalamud compatibility.");
-            }
-        }
-
-        private string GetSelectedPluginVersionPath()
-        {
-            string selectedPath = null;
-
-            var definitionFiles = Directory.GetFiles(Path.Combine(Paths.RoamingPath, "installedPlugins"), "*.json", SearchOption.AllDirectories);
-
-            foreach (var path in definitionFiles)
-            {
-                dynamic definition = JObject.Parse(File.ReadAllText(path));
-
-                try
-                {
-                    if (PluginListView.SelectedValue.ToString().Contains(definition.Name.Value + " " + definition.AssemblyVersion.Value))
-                    {
-                        selectedPath = Path.GetDirectoryName(path);
-                        break;
-                    }
-                }
-                catch (Microsoft.CSharp.RuntimeBinder.RuntimeBinderException)
-                {
-                    //Ignore files that are not config
-                }
-            }
-
-            return selectedPath;
-        }
-
-        private void TogglePlugin_OnClick(object sender, RoutedEventArgs e)
-        {
-            var pluginVersionPath = GetSelectedPluginVersionPath();
-
-            if (pluginVersionPath == null)
-            {
-                CustomMessageBox.Show(Loc.Localize("PluginPathNotFound", "Couldn't find plugin directory path."), "XIVLauncher Problem", parentWindow: Window.GetWindow(this));
-                return;
-            }
-
-            if (PluginListView.SelectedValue.ToString().Contains("(disabled)")) //If it's disabled...
-            {
-                if (File.Exists(Path.Combine(pluginVersionPath, ".disabled")))
-                {
-                    File.Delete(Path.Combine(pluginVersionPath, ".disabled")); //Enable it
-                }
-            }
-            else //If it's enabled...
-            {
-                if (!File.Exists(Path.Combine(pluginVersionPath, ".disabled")))
-                {
-                    File.WriteAllText(Path.Combine(pluginVersionPath, ".disabled"), ""); //Disable it
-                }
-            }
-
-            ReloadPluginList();
-        }
-
-        private void DeletePlugin_OnClick(object sender, RoutedEventArgs e)
-        {
-            if (GameHelpers.CheckIsGameOpen())
-            {
-                CustomMessageBox.Show(Loc.Localize("GameIsOpenPluginLocked", "The game is open, please close it and try again."), "XIVLauncher Problem", parentWindow: Window.GetWindow(this));
-                return;
-            }
-
-            var pluginVersionPath = GetSelectedPluginVersionPath();
-
-            if (pluginVersionPath == null)
-            {
-                CustomMessageBox.Show(Loc.Localize("PluginPathNotFound", "Couldn't find plugin directory path."), "XIVLauncher Problem", parentWindow: Window.GetWindow(this));
-                return;
-            }
-
-            var pluginDirectory = Directory.GetParent(pluginVersionPath);
-
-            //Just to be safe
-            if (pluginDirectory.Parent.FullName != Path.Combine(Paths.RoamingPath, "installedPlugins"))
-            {
-                CustomMessageBox.Show(Loc.Localize("PluginPathNotFound", "Couldn't find plugin directory path."), "XIVLauncher Problem", parentWindow: Window.GetWindow(this));
-                return;
-            }
-
-            pluginDirectory.Delete(true);
-
-            ReloadPluginList();
-        }
-
-        private void ReloadPluginList()
-        {
-            PluginListView.Items.Clear();
-
-            try
-            {
-                var pluginsDirectory = new DirectoryInfo(Path.Combine(Paths.RoamingPath, "installedPlugins"));
-
-                if (!pluginsDirectory.Exists)
-                    return;
-
-                foreach (var installed in pluginsDirectory.GetDirectories())
-                {
-                    var versions = installed.GetDirectories();
-
-                    if (versions.Length == 0)
-                    {
-                        Log.Information("Has no versions: {0}", installed.FullName);
-                        continue;
-                    }
-
-                    var sortedVersions = versions.OrderBy(dirInfo => {
-                        var success = Version.TryParse(dirInfo.Name, out Version version);
-                        if (!success) { Log.Debug("Unparseable version: {0}", dirInfo.Name); }
-                        return version;
-                    }).ToArray();
-                    var latest = sortedVersions.Last();
-
-                    var localInfoFile = new FileInfo(Path.Combine(latest.FullName, $"{installed.Name}.json"));
-
-                    if (!localInfoFile.Exists)
-                    {
-                        Log.Information("Has no definition: {0}", localInfoFile.FullName);
-                        continue;
-                    }
-
-                    dynamic pluginConfig = JObject.Parse(File.ReadAllText(localInfoFile.FullName));
-                    var isDisabled = File.Exists(Path.Combine(latest.FullName, ".disabled"));
-
-                    if (isDisabled)
-                    {
-                        PluginListView.Items.Add(pluginConfig.Name + " " + pluginConfig.AssemblyVersion +
-                                                 Loc.Localize("DisabledPlugin", " (disabled)"));
-                    }
-                    else
-                    {
-                        PluginListView.Items.Add(pluginConfig.Name + " " + pluginConfig.AssemblyVersion);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Could not parse installed in-game plugins.");
             }
         }
 
@@ -507,7 +356,7 @@ namespace XIVLauncher.Windows
 
         private void OpenI18nLabel_OnClick(object sender, MouseButtonEventArgs e)
         {
-            Process.Start("https://crowdin.com/project/ffxivquicklauncher");
+            PlatformHelpers.OpenBrowser("https://crowdin.com/project/ffxivquicklauncher");
         }
 
         private void GamePathEntry_OnTextChanged(object sender, TextChangedEventArgs e)
@@ -518,7 +367,7 @@ namespace XIVLauncher.Windows
             try
             {
                 isBootOrGame = !GameHelpers.LetChoosePath(ViewModel.GamePath);
-                mightBeNonInternationalVersion = GameHelpers.CanFfxivMightNotBeInternationalClient(ViewModel.GamePath);
+                mightBeNonInternationalVersion = GameHelpers.CanMightNotBeInternationalClient(ViewModel.GamePath);
             }
             catch (Exception ex)
             {
@@ -580,6 +429,28 @@ namespace XIVLauncher.Windows
             var cw = new ChangelogWindow(EnvironmentSettings.IsPreRelease);
             cw.UpdateVersion(AppUtil.GetAssemblyVersion());
             cw.ShowDialog();
+        }
+
+        private void LearnMoreButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            PlatformHelpers.OpenBrowser("https://goatcorp.github.io/faq/mobile_otp");
+        }
+
+        private void IsFreeTrialCheckbox_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (App.Steam.AsyncStartTask != null)
+            {
+                CustomMessageBox.Show(Loc.Localize("SteamFtToggleAutoStartWarning", "To apply this setting, XIVLauncher needs to restart.\nPlease reopen XIVLauncher."),
+                    "XIVLauncher", image: MessageBoxImage.Information, showDiscordLink: false, showHelpLinks: false);
+                App.Settings.IsFt = IsFreeTrialCheckbox.IsChecked == true;
+                CloseMainWindowGracefully?.Invoke(this, null);
+            }
+        }
+
+        private void OpenAdvancedSettings_OnClick(object sender, RoutedEventArgs e)
+        {
+            var asw = new AdvancedSettingsWindow();
+            asw.ShowDialog();
         }
     }
 }

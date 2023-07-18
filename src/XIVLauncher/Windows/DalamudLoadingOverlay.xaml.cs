@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Timers;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Interop;
 using CheapLoc;
 using XIVLauncher.Common.PlatformAbstractions;
 using XIVLauncher.Common.Util;
@@ -21,6 +23,9 @@ namespace XIVLauncher.Windows
             InitializeComponent();
 
             this.DataContext = new DalamudLoadingOverlayViewModel();
+
+            var interop = new WindowInteropHelper(this);
+            interop.EnsureHandle();
         }
 
         private IDalamudLoadingOverlay.DalamudUpdateStep _progress;
@@ -43,6 +48,10 @@ namespace XIVLauncher.Windows
 
                     case IDalamudLoadingOverlay.DalamudUpdateStep.Runtime:
                         ProgressTextBlock.Text = Loc.Localize("DalamudUpdateRuntime", "Updating runtime...");
+                        break;
+
+                    case IDalamudLoadingOverlay.DalamudUpdateStep.Starting:
+                        ProgressTextBlock.Text = Loc.Localize("DalamudNowStarting", "Starting...");
                         break;
 
                     case IDalamudLoadingOverlay.DalamudUpdateStep.Unavailable:
@@ -125,6 +134,12 @@ namespace XIVLauncher.Windows
         {
             base.OnClosed(e);
             IsClosed = true;
+        }
+
+        protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
+        {
+            base.OnMouseLeftButtonDown(e);
+            this.DragMove();
         }
     }
 }

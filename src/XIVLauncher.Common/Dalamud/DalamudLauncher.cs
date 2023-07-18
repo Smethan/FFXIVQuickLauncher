@@ -14,29 +14,37 @@ namespace XIVLauncher.Common.Dalamud
         private readonly DalamudLoadMethod loadMethod;
         private readonly DirectoryInfo gamePath;
         private readonly DirectoryInfo configDirectory;
+        private readonly DirectoryInfo logPath;
         private readonly ClientLanguage language;
         private readonly IDalamudRunner runner;
         private readonly DalamudUpdater updater;
         private readonly int injectionDelay;
         private readonly bool fakeLogin;
+        private readonly bool noPlugin;
+        private readonly bool noThirdPlugin;
+        private readonly string troubleshootingData;
 
         public enum DalamudInstallState
         {
             Ok,
-            Failed,
             OutOfDate,
         }
 
-        public DalamudLauncher(IDalamudRunner runner, DalamudUpdater updater, DalamudLoadMethod loadMethod, DirectoryInfo gamePath, DirectoryInfo configDirectory, ClientLanguage clientLanguage, int injectionDelay, bool fakeLogin = false)
+        public DalamudLauncher(IDalamudRunner runner, DalamudUpdater updater, DalamudLoadMethod loadMethod, DirectoryInfo gamePath, DirectoryInfo configDirectory, DirectoryInfo logPath,
+                               ClientLanguage clientLanguage, int injectionDelay, bool fakeLogin, bool noPlugin, bool noThirdPlugin, string troubleshootingData)
         {
             this.runner = runner;
             this.updater = updater;
             this.loadMethod = loadMethod;
             this.gamePath = gamePath;
             this.configDirectory = configDirectory;
+            this.logPath = logPath;
             this.language = clientLanguage;
             this.injectionDelay = injectionDelay;
             this.fakeLogin = fakeLogin;
+            this.noPlugin = noPlugin;
+            this.noThirdPlugin = noThirdPlugin;
+            this.troubleshootingData = troubleshootingData;
         }
 
         public const string REMOTE_BASE = "https://kamori.goats.dev/Dalamud/Release/VersionInfo?track=";
@@ -50,23 +58,17 @@ namespace XIVLauncher.Common.Dalamud
 
             while (this.updater.State != DalamudUpdater.DownloadState.Done)
             {
-                if (this.updater.State == DalamudUpdater.DownloadState.Failed)
-                {
-                    this.updater.CloseOverlay();
-                    return DalamudInstallState.Failed;
-                }
-
                 if (this.updater.State == DalamudUpdater.DownloadState.NoIntegrity)
                 {
                     this.updater.CloseOverlay();
-                    throw new DalamudRunnerException("No runner integrity");
+                    throw new DalamudRunnerException("Updater returned no integrity.", this.updater.EnsurementException);
                 }
 
                 Thread.Yield();
             }
 
             if (!this.updater.Runner.Exists)
-                throw new DalamudRunnerException("Runner not present");
+                throw new DalamudRunnerException("Runner did not exist.");
 
             if (!ReCheckVersion(gamePath))
             {
@@ -85,21 +87,20 @@ namespace XIVLauncher.Common.Dalamud
             Log.Information("[HOOKS] DalamudLauncher::Run(gp:{0}, cl:{1})", this.gamePath.FullName, this.language);
 
             var ingamePluginPath = Path.Combine(this.configDirectory.FullName, "installedPlugins");
-            var defaultPluginPath = Path.Combine(this.configDirectory.FullName, "devPlugins");
 
             Directory.CreateDirectory(ingamePluginPath);
-            Directory.CreateDirectory(defaultPluginPath);
 
             var startInfo = new DalamudStartInfo
             {
                 Language = language,
                 PluginDirectory = ingamePluginPath,
-                DefaultPluginDirectory = defaultPluginPath,
                 ConfigurationPath = DalamudSettings.GetConfigPath(this.configDirectory),
+                LoggingPath = this.logPath.FullName,
                 AssetDirectory = this.updater.AssetDirectory.FullName,
                 GameVersion = Repository.Ffxiv.GetVer(gamePath),
                 WorkingDirectory = this.updater.Runner.Directory?.FullName,
                 DelayInitializeMs = this.injectionDelay,
+                TroubleshootingPackData = this.troubleshootingData,
             };
 
             if (this.loadMethod != DalamudLoadMethod.ACLonly)
@@ -110,15 +111,17 @@ namespace XIVLauncher.Common.Dalamud
                 case DalamudLoadMethod.EntryPoint:
                     Log.Verbose("[HOOKS] Now running OEP rewrite");
                     break;
+
                 case DalamudLoadMethod.DllInject:
                     Log.Verbose("[HOOKS] Now running DLL inject");
                     break;
+
                 case DalamudLoadMethod.ACLonly:
                     Log.Verbose("[HOOKS] Now running ACL-only fix without injection");
                     break;
             }
 
-            var process = this.runner.Run(this.updater.Runner, this.fakeLogin, gameExe, gameArgs, environment, this.loadMethod, startInfo);
+            var process = this.runner.Run(this.updater.Runner, this.fakeLogin, this.noPlugin, this.noThirdPlugin, gameExe, gameArgs, environment, this.loadMethod, startInfo);
 
             this.updater.CloseOverlay();
 

@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using Newtonsoft.Json;
 using Serilog;
 using System.Security.Cryptography;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 using XIVLauncher.Common.Util;
 
@@ -18,25 +20,58 @@ namespace XIVLauncher.Common.Dalamud
 
         internal class AssetInfo
         {
+            [JsonPropertyName("version")]
             public int Version { get; set; }
+
+            [JsonPropertyName("assets")]
             public IReadOnlyList<Asset> Assets { get; set; }
+
+            [JsonPropertyName("packageUrl")]
+            public string PackageUrl { get; set; }
 
             public class Asset
             {
+                [JsonPropertyName("url")]
                 public string Url { get; set; }
+
+                [JsonPropertyName("fileName")]
                 public string FileName { get; set; }
+
+                [JsonPropertyName("hash")]
                 public string Hash { get; set; }
             }
         }
 
-        public static async Task<DirectoryInfo> EnsureAssets(DirectoryInfo baseDir, bool forceProxy)
+        private static void DeleteAndRecreateDirectory(DirectoryInfo dir)
         {
-            using var client = new HttpClient
+            if (!dir.Exists)
             {
-                Timeout = TimeSpan.FromMinutes(4),
+                dir.Create();
+            }
+            else
+            {
+                dir.Delete(true);
+                dir.Create();
+            }
+        }
+
+        public static void CopyFilesRecursively(DirectoryInfo source, DirectoryInfo target)
+        {
+            foreach (DirectoryInfo dir in source.GetDirectories())
+                CopyFilesRecursively(dir, target.CreateSubdirectory(dir.Name));
+
+            foreach (FileInfo file in source.GetFiles())
+                file.CopyTo(Path.Combine(target.FullName, file.Name));
+        }
+
+        public static async Task<(DirectoryInfo AssetDir, int Version)> EnsureAssets(DalamudUpdater updater, DirectoryInfo baseDir)
+        {
+            using var metaClient = new HttpClient
+            {
+                Timeout = TimeSpan.FromMinutes(30),
             };
 
-            client.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue
+            metaClient.DefaultRequestHeaders.CacheControl = new CacheControlHeaderValue
             {
                 NoCache = true,
             };
@@ -45,71 +80,85 @@ namespace XIVLauncher.Common.Dalamud
 
             Log.Verbose("[DASSET] Starting asset download");
 
-            var (isRefreshNeeded, info) = CheckAssetRefreshNeeded(baseDir);
+            var (isRefreshNeeded, info) = await CheckAssetRefreshNeeded(metaClient, baseDir);
 
             // NOTE(goat): We should use a junction instead of copying assets to a new folder. There is no C# API for junctions in .NET Framework.
 
             var assetsDir = new DirectoryInfo(Path.Combine(baseDir.FullName, info.Version.ToString()));
             var devDir = new DirectoryInfo(Path.Combine(baseDir.FullName, "dev"));
 
-            foreach (var entry in info.Assets)
+            // If we don't need a refresh, let's check if all hashes are good
+            if (!isRefreshNeeded)
             {
-                var filePath = Path.Combine(assetsDir.FullName, entry.FileName);
-                var filePathDev = Path.Combine(devDir.FullName, entry.FileName);
-
-                Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-
-                try
+                foreach (var entry in info.Assets)
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(filePathDev)!);
-                }
-                catch
-                {
-                    // ignored
-                }
+                    var filePath = Path.Combine(assetsDir.FullName, entry.FileName);
 
-                var refreshFile = false;
+                    if (!File.Exists(filePath))
+                    {
+                        Log.Error("[DASSET] {0} not found locally", entry.FileName);
+                        isRefreshNeeded = true;
+                        break;
+                    }
 
-                if (File.Exists(filePath) && !string.IsNullOrEmpty(entry.Hash))
-                {
+                    if (string.IsNullOrEmpty(entry.Hash))
+                        continue;
+
                     try
                     {
                         using var file = File.OpenRead(filePath);
                         var fileHash = sha1.ComputeHash(file);
                         var stringHash = BitConverter.ToString(fileHash).Replace("-", "");
-                        refreshFile = stringHash != entry.Hash;
-                        Log.Verbose("[DASSET] {0} has {1}, remote {2}", entry.FileName, stringHash, entry.Hash);
+
+                        if (stringHash != entry.Hash)
+                        {
+                            Log.Error("[DASSET] {0} has {1}, remote {2}, need refresh", entry.FileName, stringHash, entry.Hash);
+                            isRefreshNeeded = true;
+                            //break;
+                        }
                     }
                     catch (Exception ex)
                     {
                         Log.Error(ex, "[DASSET] Could not read asset");
+                        isRefreshNeeded = true;
+                        break;
                     }
                 }
+            }
 
-                if (!File.Exists(filePath) || isRefreshNeeded || refreshFile)
+            if (isRefreshNeeded)
+            {
+                DeleteAndRecreateDirectory(assetsDir);
+
+                // Wait for it to be gone
+                Thread.Sleep(1000);
+
+                var packageUrl = info.PackageUrl;
+
+                var tempPath = Path.GetTempFileName();
+
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
+
+                await updater.DownloadFile(packageUrl, tempPath, TimeSpan.FromMinutes(4));
+
+                using (var packageStream = File.OpenRead(tempPath))
+                using (var packageArc = new ZipArchive(packageStream, ZipArchiveMode.Read))
                 {
-                    var url = entry.Url;
-
-                    if (forceProxy && url.Contains("/File/Get/"))
-                    {
-                        url = url.Replace("/File/Get/", "/File/GetProxy/");
-                    }
-
-                    Log.Verbose("[DASSET] Downloading {0} to {1}...", url, entry.FileName);
-
-                    var request = await client.GetAsync(url + "?t=" + DateTime.Now.Ticks).ConfigureAwait(true);
-                    request.EnsureSuccessStatusCode();
-                    File.WriteAllBytes(filePath, await request.Content.ReadAsByteArrayAsync().ConfigureAwait(true));
-
-                    try
-                    {
-                        File.Copy(filePath, filePathDev, true);
-                    }
-                    catch
-                    {
-                        // ignored
-                    }
+                    packageArc.ExtractToDirectory(assetsDir.FullName);
                 }
+
+                try
+                {
+                    DeleteAndRecreateDirectory(devDir);
+                    CopyFilesRecursively(assetsDir, devDir);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "[DASSET] Could not copy to dev dir");
+                }
+
+                File.Delete(tempPath);
             }
 
             if (isRefreshNeeded)
@@ -119,7 +168,7 @@ namespace XIVLauncher.Common.Dalamud
 
             CleanUpOld(baseDir, info.Version - 1);
 
-            return assetsDir;
+            return (assetsDir, info.Version);
         }
 
         private static string GetAssetVerPath(DirectoryInfo baseDir)
@@ -133,10 +182,8 @@ namespace XIVLauncher.Common.Dalamud
         /// </summary>
         /// <param name="baseDir">Base directory for assets</param>
         /// <returns>Update state</returns>
-        private static (bool isRefreshNeeded, AssetInfo info) CheckAssetRefreshNeeded(DirectoryInfo baseDir)
+        private static async Task<(bool isRefreshNeeded, AssetInfo info)> CheckAssetRefreshNeeded(HttpClient client, DirectoryInfo baseDir)
         {
-            using var client = new WebClient();
-
             var localVerFile = GetAssetVerPath(baseDir);
             var localVer = 0;
 
@@ -151,7 +198,7 @@ namespace XIVLauncher.Common.Dalamud
                 Log.Error(ex, "[DASSET] Could not read asset.ver");
             }
 
-            var remoteVer = JsonConvert.DeserializeObject<AssetInfo>(client.DownloadString(ASSET_STORE_URL));
+            var remoteVer = JsonSerializer.Deserialize<AssetInfo>(await client.GetStringAsync(ASSET_STORE_URL));
 
             Log.Verbose("[DASSET] Ver check - local:{0} remote:{1}", localVer, remoteVer.Version);
 
@@ -178,17 +225,25 @@ namespace XIVLauncher.Common.Dalamud
             if (GameHelpers.CheckIsGameOpen())
                 return;
 
-            var toDelete = Path.Combine(baseDir.FullName, version.ToString());
+            for (int i = version; i >= version - 30; i--)
+            {
+                var toDelete = Path.Combine(baseDir.FullName, i.ToString());
 
-            try
-            {
-                if (Directory.Exists(toDelete))
-                    Directory.Delete(toDelete, true);
+                try
+                {
+                    if (Directory.Exists(toDelete))
+                    {
+                        Directory.Delete(toDelete, true);
+                        Log.Verbose("[DASSET] Cleaned out old v{Version}", i);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "[DASSET] Could not clean up old assets");
+                }
             }
-            catch (Exception ex)
-            {
-                Log.Error(ex, "Could not clean up old assets");
-            }
+
+            Log.Verbose("[DASSET] Finished cleaning");
         }
     }
 }

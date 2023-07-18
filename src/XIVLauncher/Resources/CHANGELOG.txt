@@ -1,5 +1,6 @@
-﻿• Added a switcher to the news banners (by MapleRecall)
-• Game repair will now move all non-standard game files into a special folder, e.g. XivMods.json (by kizer)
-• Further improvements to prevent crashes after Dalamud updates
-• Updated the localization files
-    => Big thanks to all volunteer translators!
+﻿* The "Updating assets" step of starting the game will now show the actual download progress
+* Fixes an issue wherein the launcher may not have started correctly under very specific circumstances
+* Fixes an issue wherein the game may not have started correctly under very specific circumstances
+* Fixes an issue wherein some error messages may have been unclear
+* Updated the localization files
+    => Thanks to our dedicated localization team!
