@@ -261,12 +261,12 @@ namespace XIVLauncher.Windows.ViewModel
                             if (query.AllKeys.Contains("algorithm") || new[] { "sha1", "sha256", "sha512" }.Any(a => a.Equals(query["algorithm"], StringComparison.OrdinalIgnoreCase)))
                                 algorithm = query["algorithm"].ToLowerInvariant();
 
-                            otp = Util.GetTotpToken(secretKey, algorithm, digits, period);
+                            otp = TotpHelpers.GetTotpToken(secretKey, algorithm, digits, period);
                         }
                         else
                         {
                             var secretKey = AccountManager.CurrentAccount.OtpUri;
-                            otp = Util.GetTotpToken(secretKey);
+                            otp = TotpHelpers.GetTotpToken(secretKey);
                         }
                     }
                     catch (Exception)

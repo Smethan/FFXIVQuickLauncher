@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using XIVLauncher.Windows.ViewModel;
+using XIVLauncher.Common.Util;
 using CheckBox = System.Windows.Controls.CheckBox;
 
 namespace XIVLauncher.Windows
@@ -204,7 +205,7 @@ namespace XIVLauncher.Windows
 
                 try
                 {
-                    await ChangeCheckBox(OtpCodeCheckBox, Common.Util.GetTotpToken(_tokenInfo.Value.Secret, _tokenInfo.Value.Algorithm, _tokenInfo.Value.Digits, _tokenInfo.Value.Period), true);
+                    await ChangeCheckBox(OtpCodeCheckBox, TotpHelpers.GetTotpToken(_tokenInfo.Value.Secret, _tokenInfo.Value.Algorithm, _tokenInfo.Value.Digits, _tokenInfo.Value.Period), true);
                 }
                 catch (Exception)
                 {
